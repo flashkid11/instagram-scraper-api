@@ -1,0 +1,10 @@
+# Example .gitignore content
+venv/
+__pycache__/
+*.pyc
+.env
+node_modules/
+build/
+dist/
+*.log
+.DS_Store
