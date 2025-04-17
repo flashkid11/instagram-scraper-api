@@ -12,8 +12,6 @@
   <a href="YOUR_LIVE_DEPLOYMENT_URL_HERE (Optional)"> <!-- Link the image -->
     <img
       src="./docs/images/banner.svg"  <!-- Update this path -->
-      alt="Instagram Scraper Application Screenshot/Banner"
-      width="80%" <!-- Adjust width as needed -->
     />
   </a>
 </p>
