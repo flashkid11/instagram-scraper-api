@@ -1,0 +1,152 @@
+/* src/App.css */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+body {
+  margin: 0;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* Align items to the top */
+  padding: 40px 20px; /* Add horizontal padding too */
+  box-sizing: border-box; /* Include padding in width calculation */
+  color: #333;
+}
+
+.App {
+  background-color: rgba(255, 255, 255, 0.95); /* Slightly less transparent */
+  padding: 30px 40px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 100%; /* Take full width within padding */
+  max-width: 1200px; /* Increase max width slightly for wider tables */
+  text-align: center;
+  transition: all 0.3s ease-in-out;
+  box-sizing: border-box; /* Include padding in width calculation */
+}
+
+.App:hover {
+   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.App h1 {
+  color: #2c3e50;
+  margin-top: 0; /* Remove default top margin */
+  margin-bottom: 30px;
+  font-weight: 700;
+  font-size: 2.2em; /* Slightly larger title */
+  background: -webkit-linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* --- Status/Loading/Error Messages --- */
+
+.status-container {
+  display: flex;
+  flex-direction: column; /* Stack items vertically */
+  align-items: center;
+  gap: 10px; /* Space between indicator and button */
+  margin: 25px 0; /* Increased margin */
+}
+
+.loading-indicator {
+  color: #2980b9;
+  background-color: #ecf0f1;
+  padding: 12px 25px; /* Adjusted padding */
+  border-radius: 8px;
+  font-weight: 600;
+  display: inline-block;
+  animation: pulse 1.5s infinite ease-in-out;
+  min-width: 300px; /* Give it some base width */
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.error-message,
+.success-message {
+  margin: 20px auto; /* Center horizontally */
+  padding: 15px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  max-width: 800px; /* Limit width */
+  text-align: left; /* Align text left within the box */
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+.error-message {
+  color: #c0392b;
+  background-color: #fadbd8;
+  border-left: 5px solid #c0392b; /* Add accent border */
+}
+
+.success-message {
+  color: #16a085; /* Teal color for success */
+  background-color: #e8f6f3; /* Light teal background */
+  border-left: 5px solid #1abc9c; /* Add accent border */
+}
+
+.cancel-button {
+  padding: 8px 18px; /* Slightly larger padding */
+  font-size: 0.95rem; /* Slightly larger font */
+  font-weight: 600;
+  color: #fff;
+  background-color: #e74c3c; /* Red for cancel */
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 3px 8px rgba(231, 76, 60, 0.3);
+}
+
+.cancel-button:hover {
+  background-color: #c0392b;
+  transform: translateY(-2px);
+   box-shadow: 0 5px 12px rgba(231, 76, 60, 0.4);
+}
+
+.cancel-button:active {
+  transform: translateY(0px);
+  box-shadow: 0 2px 5px rgba(231, 76, 60, 0.3);
+}
+
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.03); opacity: 0.8; } /* Slightly adjusted pulse */
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .App {
+    padding: 20px 15px; /* Reduce padding */
+  }
+  .App h1 {
+    font-size: 1.8em;
+  }
+  .loading-indicator {
+    min-width: 250px; /* Adjust min-width for smaller screens */
+    padding: 10px 20px;
+  }
+  .error-message,
+  .success-message {
+     max-width: 95%;
+     font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+    .App h1 {
+        font-size: 1.6em;
+    }
+     .loading-indicator {
+       min-width: 200px;
+       font-size: 0.9rem;
+    }
+}

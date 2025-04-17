@@ -1,0 +1,50 @@
+/* src/components/DownloadOptions.css */
+.download-options-container {
+    margin-top: 25px;
+    display: flex;
+    justify-content: center; /* Center buttons */
+    align-items: center;
+    gap: 15px; /* Space between buttons */
+    flex-wrap: wrap; /* Allow wrapping if needed */
+  }
+  
+  .download-button {
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 150px; /* Give buttons a minimum width */
+    text-align: center;
+  }
+  
+  /* Specific styles per button type */
+  .download-button.csv {
+    background-color: #27ae60; /* Green for CSV */
+    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+  }
+  .download-button.csv:hover {
+    background-color: #2ecc71;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+  }
+  
+  .download-button.json {
+    background-color: #8e44ad; /* Purple for JSON */
+    box-shadow: 0 4px 15px rgba(142, 68, 173, 0.3);
+  }
+  .download-button.json:hover {
+    background-color: #9b59b6;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(142, 68, 173, 0.4);
+  }
+  
+  
+  .download-button:active {
+      transform: translateY(0px);
+      /* Reset box-shadow slightly on active */
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }

@@ -1,0 +1,208 @@
+/* src/components/ResultsTable.css */
+.results-container {
+    margin-top: 30px;
+    width: 100%;
+  }
+  
+  /* New container for title and filter */
+  .table-controls-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 10px;
+  }
+  
+  .results-container h2 {
+    color: #2c3e50;
+    margin-bottom: 0; /* Removed bottom margin as it's handled by the container */
+    font-weight: 600;
+    flex-shrink: 0; /* Prevent title from shrinking too much */
+  }
+  
+  .filter-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .filter-container label {
+    font-weight: 600;
+    color: #34495e;
+    font-size: 0.95rem;
+  }
+  
+  .filter-input {
+    padding: 8px 12px;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    min-width: 200px; /* Give it some base width */
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .filter-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+  }
+  
+  
+  .table-wrapper {
+    max-height: 500px;
+    overflow: auto;
+    border: 1px solid #dfe6e9;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  
+  th, td {
+    padding: 10px 12px; /* Slightly smaller padding */
+    text-align: left;
+    border-bottom: 1px solid #dfe6e9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px; /* Adjust as needed */
+    /* Add title attribute for full text on hover (done in JS cell render now) */
+  }
+  
+  th {
+    background-color: #f8f9fa;
+    color: #34495e;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Style for sortable headers */
+  th.sortable {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  th.sortable:hover {
+    background-color: #e9ecef;
+  }
+  
+  tbody tr {
+    transition: background-color 0.2s ease;
+  }
+  
+  tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+  }
+  
+  tbody tr:hover {
+    background-color: #e9ecef;
+  }
+  
+  td a {
+    color: #3498db;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    font-weight: 500; /* Make links slightly bolder */
+  }
+  
+  td a:hover {
+    color: #2980b9;
+    text-decoration: underline;
+  }
+  
+  .no-data-message {
+      margin-top: 20px;
+      color: #555;
+      font-style: italic;
+  }
+  
+  /* --- Pagination Styles --- */
+  .pagination-controls {
+    padding-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    gap: 8px; /* Spacing between buttons/elements */
+  }
+  
+  .pagination-controls button,
+  .pagination-controls select,
+  .pagination-controls input {
+    padding: 6px 10px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    background-color: #fff;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+  
+  .pagination-controls button:hover:not(:disabled),
+  .pagination-controls select:hover {
+    background-color: #f0f0f0;
+    border-color: #adb5bd;
+  }
+  
+  .pagination-controls button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background-color: #f8f9fa;
+  }
+  
+  .pagination-controls span {
+    margin: 0 5px;
+    font-size: 0.95rem;
+  }
+  .pagination-controls strong {
+    font-weight: 600;
+  }
+  
+  .pagination-controls input[type="number"] {
+      width: 60px; /* Adjust width */
+      text-align: center;
+  }
+  
+  /* Remove spinners from number input (optional) */
+  .pagination-controls input[type=number]::-webkit-inner-spin-button,
+  .pagination-controls input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .pagination-controls input[type=number] {
+    -moz-appearance: textfield; /* Firefox */
+  }
+  
+  
+  /* --- Responsive Adjustments --- */
+  @media (max-width: 768px) {
+      .table-controls-header {
+          flex-direction: column; /* Stack title and filter */
+          align-items: flex-start; /* Align items left */
+      }
+      .filter-container {
+          width: 100%; /* Make filter take full width */
+      }
+      .filter-input {
+          min-width: 0; /* Remove min-width */
+          width: 100%; /* Make input full width */
+          box-sizing: border-box;
+      }
+      .table-wrapper {
+          max-height: none;
+          /* Keep overflow auto or set to scroll if needed */
+      }
+      .pagination-controls {
+          justify-content: center; /* Center items when wrapped */
+          padding-top: 15px;
+      }
+  
+      /* Optional: Consider mobile-specific table display if needed */
+  }
