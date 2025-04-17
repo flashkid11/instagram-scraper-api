@@ -1,3 +1,67 @@
+# 📸 Instagram Post Scraper Pro 📊
+
+<!--
+  ✨ BANNER/SCREENSHOT AREA ✨
+  Replace the placeholder image below with an actual screenshot or a custom banner for your project!
+  1. Create an image (e.g., using Canva, Figma, or just take a screenshot).
+  2. Place the image file in your repository (e.g., create a `docs/images/` folder).
+  3. Update the `src` path below.
+  4. Update the link `href` to point to your live deployment URL if available.
+-->
+<p align="center">
+  <a href="YOUR_LIVE_DEPLOYMENT_URL_HERE (Optional)"> <!-- Link the image -->
+    <img
+      src="./docs/images/screenshot-placeholder.png"  <!-- Update this path -->
+      alt="Instagram Scraper Application Screenshot/Banner"
+      width="80%" <!-- Adjust width as needed -->
+    />
+  </a>
+</p>
+
+> **Effortlessly scrape Instagram posts via URLs, view interactive results, and download data as CSV/JSON. Built with React, Flask, and Apify, ready to deploy on Vercel. ✨**
+
+---
+
+<!-- Optional: Add Shields.io Badges Here -->
+<!-- These provide quick status info. Customize them for your repo/deployment. -->
+<!-- <p align="center">
+  <a href="https://github.com/<your_github_user>/<your_repo_name>/blob/main/LICENSE"><img src="https://img.shields.io/github/license/<your_github_user>/<your_repo_name>?style=for-the-badge" alt="License"></a>
+  <a href="https://vercel.com/YOUR_VERCEL_USERNAME/YOUR_PROJECT_NAME"><img src="https://img.shields.io/github/deployments/<your_github_user>/<your_repo_name>/production?label=vercel&style=for-the-badge" alt="Vercel Deployment"></a>
+  <img src="https://img.shields.io/github/last-commit/<your_github_user>/<your_repo_name>?style=for-the-badge" alt="Last Commit">
+</p> -->
+<!-- <br/> -->
+
+
+## Features
+
+*   **URL Input:** Scrape data using one or more Instagram profile or post URLs.
+*   **Post Limit:** Specify the maximum number of posts to retrieve per profile.
+*   **Apify Integration:** Leverages an Apify actor for robust Instagram scraping.
+*   **Interactive Results Table:** Displays scraped data with features like:
+    *   Sorting by columns (likes, comments, timestamp, etc.)
+    *   Filtering across all columns.
+    *   Pagination for large datasets.
+*   **Data Download:** Download the scraped results in CSV or JSON format.
+*   **Progress & Cancellation:** Shows scraping progress stages and allows cancellation of the request.
+*   **Responsive UI:** Designed to work on different screen sizes.
+*   **Vercel Deployment:** Configured for easy deployment on Vercel.
+
+## Tech Stack
+
+*   **Frontend:**
+    *   React
+    *   TanStack Table (React Table v8) - For interactive tables
+    *   Papaparse - For robust CSV parsing (used internally by table component)
+    *   CSS - For styling
+*   **Backend:**
+    *   Python 3.x
+    *   Flask - Web framework
+    *   Apify Client (`apify-client`) - To interact with the Apify API
+    *   python-dotenv - To manage environment variables locally
+*   **Deployment:**
+    *   Vercel
+
+
 
 ## Local Setup & Installation
 
