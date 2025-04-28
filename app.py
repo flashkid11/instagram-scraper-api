@@ -193,7 +193,20 @@ def scrape_tiktok_api():
     input_hashtags = [tag.strip() for tag in hashtags_input if isinstance(tag, str) and tag.strip()]
     if not input_hashtags: return jsonify({"error": "No valid hashtags"}), 400
 
-    run_input = { "hashtags": input_hashtags, "resultsPerPage": results_per_page }
+
+    # Cost per result according to this config:
+    # ~ 0.005 for starting the actor
+    # ~ 0.003 USD per result (0.0001 * 100 = 0.01 USD for 100 results)
+    # In total: 0.005 + 0.003 = 0.008 USD for 1 result
+    # In total of 1000 results: 0.005 + 0.003 * 1000 = 3.05 USD
+    run_input = { 
+                 "hashtags": input_hashtags,
+                 "resultsPerPage": results_per_page,
+                 "shouldDownloadCovers": False,
+                 "shouldDownloadSlideshowImages": False,
+                 "shouldDownloadSubtitles": False,
+                 "shouldDownloadVideos": False,
+                }
     print(f"API (TikTok): Starting scraper for hashtags: {', '.join(input_hashtags)} with limit {results_per_page}")
     print(f"API (TikTok): Actor ID: {TIKTOK_ACTOR_ID}")
     print(f"API (TikTok): Run Input: {run_input}")
