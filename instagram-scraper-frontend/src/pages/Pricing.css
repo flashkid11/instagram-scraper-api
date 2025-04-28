@@ -1,0 +1,132 @@
+/* src/pages/Pricing.css */
+
+.pricing-container {
+    max-width: 850px;
+    margin: 30px auto;
+    padding: 20px 30px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    line-height: 1.7;
+    color: #333;
+  }
+  
+  .pricing-container h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #2c3e50;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+  }
+  
+  .pricing-container h3 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    color: #34495e;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 5px;
+    font-size: 1.4em;
+  }
+  
+  .pricing-container h4 {
+      margin-top: 25px;
+      margin-bottom: 10px;
+      color: #34495e;
+      font-size: 1.1em;
+  }
+  
+  .pricing-container section {
+    margin-bottom: 30px;
+  }
+  
+  .pricing-container p {
+      margin-bottom: 15px;
+  }
+  
+  .pricing-container ul {
+    padding-left: 25px;
+    margin-top: 10px;
+    list-style: disc;
+  }
+  
+  .pricing-container li {
+    margin-bottom: 8px;
+  }
+  
+  .pricing-container strong {
+    font-weight: 600;
+  }
+  
+  .pricing-container em {
+      font-style: italic;
+      color: #555;
+  }
+  
+  /* Table Styles */
+  .pricing-table-wrapper {
+      overflow-x: auto; /* Allow horizontal scroll if needed on small screens */
+      margin-top: 15px;
+      margin-bottom: 20px;
+  }
+  
+  .pricing-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #ddd;
+      font-size: 0.95rem;
+  }
+  
+  .pricing-table th,
+  .pricing-table td {
+      border: 1px solid #ddd;
+      padding: 12px 15px;
+      text-align: left;
+      vertical-align: middle;
+  }
+  
+  .pricing-table th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+      color: #34495e;
+  }
+  
+  .pricing-table tbody tr:nth-child(even) {
+      background-color: #fdfdfd;
+  }
+  
+  .pricing-table .price-value {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #007bff;
+      text-align: center;
+  }
+  
+  /* Divider */
+  .section-divider {
+      margin: 40px 0;
+      border: none;
+      border-top: 1px solid #eee;
+  }
+  
+  /* Footer Links */
+  .pricing-footer-links {
+      margin-top: 30px;
+      text-align: center;
+      border-top: 1px solid #eee;
+      padding-top: 20px;
+      font-size: 0.9em;
+  }
+  
+  .pricing-footer-links p {
+      margin-bottom: 10px;
+  }
+  
+  .pricing-footer-links a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  
+  .pricing-footer-links a:hover {
+    text-decoration: underline;
+  }

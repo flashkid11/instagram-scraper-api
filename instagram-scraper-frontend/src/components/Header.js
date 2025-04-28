@@ -1,18 +1,20 @@
 // src/components/Header.js
 import React from 'react';
-import { NavLink } from 'react-router-dom'; // Use NavLink for active styling
+import { NavLink } from 'react-router-dom';
 import './Header.css';
 
 function Header() {
+    const githubLink = "https://github.com/flashkid11/instagram-scraper-api"; // Your repo link
+
     return (
         <header className="app-header">
             <div className="header-content">
-                <h1 className="header-title">📊 Social media Scraper</h1>
+                <h1 className="header-title">📊 Social Scraper</h1>
                 <nav className="header-nav">
                     <ul>
                         <li>
                             <NavLink
-                                to="/" // Link to the main scraper page
+                                to="/"
                                 className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
                             >
                                 Scraper
@@ -20,19 +22,28 @@ function Header() {
                         </li>
                         <li>
                             <NavLink
-                                to="/how-to-use" // Link to the instructions page
+                                to="/how-to-use"
                                 className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
                             >
                                 How to Use
                             </NavLink>
                         </li>
-                        {/* Optional: Link to GitHub */}
+                        {/* --- Add Pricing Link --- */}
+                        <li>
+                            <NavLink
+                                to="/pricing" // Link to the new pricing page
+                                className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+                            >
+                                Pricing
+                            </NavLink>
+                        </li>
+                        {/* --- End Add Pricing Link --- */}
                         <li>
                             <a
-                                href="https://github.com/flashkid11/instagram-scraper-api" // Replace with your actual repo link
+                                href={githubLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className='nav-link external-link' // Style differently maybe
+                                className='nav-link external-link'
                             >
                                 GitHub ↗
                             </a>
@@ -43,7 +54,5 @@ function Header() {
         </header>
     );
 }
-
-// Replace YOUR_GITHUB_REPO_LINK_HERE with your repo URL
 
 export default Header;
