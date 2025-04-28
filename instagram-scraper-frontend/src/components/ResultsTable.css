@@ -1,208 +1,320 @@
 /* src/components/ResultsTable.css */
 .results-container {
-    margin-top: 30px;
-    width: 100%;
-  }
-  
-  /* New container for title and filter */
-  .table-controls-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    flex-wrap: wrap; /* Allow wrapping on smaller screens */
-    gap: 10px;
-  }
-  
-  .results-container h2 {
-    color: #2c3e50;
-    margin-bottom: 0; /* Removed bottom margin as it's handled by the container */
-    font-weight: 600;
-    flex-shrink: 0; /* Prevent title from shrinking too much */
-  }
-  
-  .filter-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .filter-container label {
-    font-weight: 600;
-    color: #34495e;
-    font-size: 0.95rem;
-  }
-  
-  .filter-input {
-    padding: 8px 12px;
-    border: 1px solid #bdc3c7;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    min-width: 200px; /* Give it some base width */
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-  }
-  
-  .filter-input:focus {
-    outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
-  }
-  
-  
-  .table-wrapper {
-    max-height: 500px;
-    overflow: auto;
-    border: 1px solid #dfe6e9;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-  }
-  
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-  
-  th, td {
-    padding: 10px 12px; /* Slightly smaller padding */
-    text-align: left;
-    border-bottom: 1px solid #dfe6e9;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 250px; /* Adjust as needed */
-    /* Add title attribute for full text on hover (done in JS cell render now) */
-  }
-  
-  th {
-    background-color: #f8f9fa;
-    color: #34495e;
-    font-weight: 600;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
-  }
-  
-  /* Style for sortable headers */
-  th.sortable {
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-  }
-  th.sortable:hover {
-    background-color: #e9ecef;
-  }
-  
-  tbody tr {
-    transition: background-color 0.2s ease;
-  }
-  
-  tbody tr:nth-child(even) {
-    background-color: #f8f9fa;
-  }
-  
-  tbody tr:hover {
-    background-color: #e9ecef;
-  }
-  
-  td a {
-    color: #3498db;
-    text-decoration: none;
-    transition: color 0.2s ease;
-    font-weight: 500; /* Make links slightly bolder */
-  }
-  
-  td a:hover {
-    color: #2980b9;
-    text-decoration: underline;
-  }
-  
-  .no-data-message {
-      margin-top: 20px;
-      color: #555;
-      font-style: italic;
-  }
-  
-  /* --- Pagination Styles --- */
-  .pagination-controls {
-    padding-top: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap; /* Allow wrapping on small screens */
-    gap: 8px; /* Spacing between buttons/elements */
-  }
-  
-  .pagination-controls button,
-  .pagination-controls select,
-  .pagination-controls input {
-    padding: 6px 10px;
-    border: 1px solid #bdc3c7;
-    border-radius: 4px;
-    background-color: #fff;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
-  }
-  
-  .pagination-controls button:hover:not(:disabled),
-  .pagination-controls select:hover {
-    background-color: #f0f0f0;
-    border-color: #adb5bd;
-  }
-  
-  .pagination-controls button:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-    background-color: #f8f9fa;
-  }
-  
-  .pagination-controls span {
-    margin: 0 5px;
-    font-size: 0.95rem;
-  }
-  .pagination-controls strong {
-    font-weight: 600;
-  }
-  
-  .pagination-controls input[type="number"] {
-      width: 60px; /* Adjust width */
-      text-align: center;
-  }
-  
-  /* Remove spinners from number input (optional) */
-  .pagination-controls input[type=number]::-webkit-inner-spin-button,
-  .pagination-controls input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-  .pagination-controls input[type=number] {
-    -moz-appearance: textfield; /* Firefox */
-  }
-  
-  
-  /* --- Responsive Adjustments --- */
-  @media (max-width: 768px) {
-      .table-controls-header {
-          flex-direction: column; /* Stack title and filter */
-          align-items: flex-start; /* Align items left */
-      }
-      .filter-container {
-          width: 100%; /* Make filter take full width */
-      }
-      .filter-input {
-          min-width: 0; /* Remove min-width */
-          width: 100%; /* Make input full width */
-          box-sizing: border-box;
-      }
-      .table-wrapper {
-          max-height: none;
-          /* Keep overflow auto or set to scroll if needed */
-      }
-      .pagination-controls {
-          justify-content: center; /* Center items when wrapped */
-          padding-top: 15px;
-      }
-  
-      /* Optional: Consider mobile-specific table display if needed */
-  }
+  margin-top: 30px;
+  width: 100%;
+}
+
+/* Container for title and filter */
+.table-controls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.results-container h2 {
+  color: #2c3e50;
+  margin-bottom: 0;
+  font-weight: 600;
+  font-size: 1.2em;
+  flex-shrink: 0;
+}
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-container label {
+  font-weight: 600;
+  color: #34495e;
+  font-size: 0.95rem;
+}
+
+.filter-input {
+  padding: 8px 12px;
+  border: 1px solid #bdc3c7;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  min-width: 200px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+
+.table-wrapper {
+  max-height: 65vh; /* Use viewport height */
+  overflow: auto; /* Scroll both ways */
+  border: 1px solid #dfe6e9;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  table-layout: fixed; /* Respect column widths */
+}
+
+/* Default cell styles */
+th, td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #dfe6e9;
+  white-space: nowrap !important; /* Prevent wrapping */
+  overflow: hidden !important; /* Hide overflow */
+  text-overflow: ellipsis !important; /* Show ... */
+  vertical-align: middle;
+}
+
+/* Header specific styles */
+th {
+  background-color: #f8f9fa;
+  color: #34495e;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Style for sortable headers */
+th.sortable {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+th.sortable:hover {
+  background-color: #e9ecef;
+}
+
+/* Sort icons */
+.sort-icon {
+    font-size: 0.8em;
+    margin-left: 5px;
+    color: #aaa;
+    display: inline-block;
+    width: 1em;
+    text-align: center;
+    vertical-align: baseline;
+}
+th.sorted-asc .sort-icon,
+th.sorted-desc .sort-icon {
+    color: #007bff;
+}
+
+
+/* Body row styles */
+tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+tbody tr:hover {
+  background-color: #e9ecef;
+}
+
+/* --- Cell Alignment & Specific Styles --- */
+
+/* Right-align numeric headers and cells */
+th.numeric-header,
+td.numeric-cell {
+    text-align: right !important;
+    padding-right: 15px; /* More padding on right for numbers */
+}
+
+/* Center-align image and link cells */
+td.center-cell {
+    text-align: center !important;
+}
+
+/* Style for links */
+td a {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: 500;
+  white-space: nowrap;
+}
+td a:hover {
+  color: #2980b9;
+  text-decoration: underline;
+}
+
+/* Class for spans inside cells that need truncation */
+td span.truncate {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%; /* Fill cell, but allow ellipsis */
+}
+
+/* Style for avatar images (TikTok) */
+td .table-avatar {
+  max-width: 40px;
+  max-height: 40px;
+  height: auto;
+  border-radius: 50%;
+  vertical-align: middle;
+  display: inline-block;
+  object-fit: cover;
+  border: 1px solid #eee;
+  background-color: #f0f0f0;
+}
+
+/* Style for generic image previews (Instagram displayUrl) */
+td .table-image-preview {
+  max-width: 80px;   /* Adjusted size */
+  max-height: 60px;
+  height: auto;
+  vertical-align: middle;
+  display: inline-block; /* Important for centering */
+  object-fit: contain; /* Show whole image */
+  border: 1px solid #eee;
+  background-color: #f0f0f0;
+}
+
+
+/* Placeholder for empty cells */
+.cell-nodata::before {
+    content: "–";
+    color: #aaa;
+    font-style: italic;
+}
+
+/* Index column */
+.index-column, th.index-column {
+    width: 50px !important; /* Strict width */
+    flex-shrink: 0;
+    flex-grow: 0;
+    text-align: center !important;
+    color: #777;
+    font-size: 0.85em;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+}
+
+/* Row shown when no results match filter */
+.no-results-row td {
+    text-align: center !important;
+    font-style: italic;
+    padding: 20px !important;
+    color: #555;
+    white-space: normal !important; /* Allow message to wrap */
+}
+
+
+/* --- Pagination Styles (Keep As Is) --- */
+.pagination-controls {
+  /* ... (your existing pagination styles) ... */
+  padding-top: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pagination-controls button,
+.pagination-controls select,
+.pagination-controls input {
+  padding: 6px 10px;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.pagination-controls button:hover:not(:disabled),
+.pagination-controls select:hover {
+  background-color: #f0f0f0;
+  border-color: #adb5bd;
+}
+.pagination-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background-color: #f8f9fa;
+}
+.pagination-controls span { margin: 0 5px; font-size: 0.95rem; color: #34495e; }
+.pagination-controls strong { font-weight: 600; }
+.pagination-controls input[type="number"] { width: 60px; text-align: center; -moz-appearance: textfield; }
+.pagination-controls input[type=number]::-webkit-inner-spin-button,
+.pagination-controls input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+
+/* --- Responsive Adjustments (Keep As Is or Refine) --- */
+@media (max-width: 768px) {
+    .table-controls-header {
+        flex-direction: column;
+        align-items: stretch; /* Stretch items full width */
+    }
+    .results-container h2 {
+        text-align: center; /* Center title */
+        margin-bottom: 10px;
+    }
+    .filter-container {
+        width: 100%;
+        justify-content: center; /* Center filter */
+    }
+    .filter-input {
+        min-width: 0;
+        flex-grow: 1; /* Allow input to grow */
+    }
+
+    /* Make table scrollable horizontally within wrapper */
+    /* .table-wrapper { overflow-x: auto; } */
+    /* table { table-layout: auto; } */ /* Switch to auto layout? Might mess up widths */
+
+    .pagination-controls {
+        justify-content: center;
+        padding-top: 15px;
+        font-size: 0.9em; /* Slightly smaller controls */
+    }
+    .pagination-controls button,
+    .pagination-controls select,
+    .pagination-controls input {
+        padding: 5px 8px;
+        font-size: 0.85rem;
+    }
+    .pagination-controls input[type="number"] {
+        width: 50px;
+    }
+
+    /* Adjust cell padding */
+    th, td {
+        padding: 8px 6px;
+    }
+    .index-column, th.index-column {
+        width: 40px;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+    }
+    td .table-avatar {
+        max-width: 30px;
+        max-height: 30px;
+    }
+    td .table-image-preview {
+        max-width: 50px;
+        max-height: 40px;
+    } /* Adjusted preview */
+    /* ... (your existing responsive styles) ... */
+    .table-controls-header { flex-direction: column; align-items: stretch; }
+    .results-container h2 { text-align: center; margin-bottom: 10px; }
+    .filter-container { width: 100%; justify-content: center; }
+    .filter-input { min-width: 0; flex-grow: 1; }
+    .pagination-controls { justify-content: center; padding-top: 15px; font-size: 0.9em; }
+    .pagination-controls button, .pagination-controls select, .pagination-controls input { padding: 5px 8px; font-size: 0.85rem; }
+    .pagination-controls input[type="number"] { width: 50px; }
+    th, td { padding: 8px 6px; }
+    .index-column, th.index-column { width: 40px !important; padding-left: 4px !important; padding-right: 4px !important; }
+    td .table-avatar { max-width: 30px; max-height: 30px; }
+    td .table-image-preview { max-width: 60px; max-height: 40px; } /* Adjusted preview */
+    th.numeric-header, td.numeric-cell { padding-right: 8px; }
+}

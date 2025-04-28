@@ -1,72 +1,126 @@
 /* src/components/InputForm.css */
+
 .input-form {
-    margin-bottom: 30px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* Spacing between form groups */
-  }
-  
-  .form-group {
-    text-align: left;
-  }
-  
-  .form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #34495e;
-  }
-  
-  .form-group textarea,
-  .form-group input[type="number"] {
-    width: 100%;
-    padding: 12px 15px;
-    border: 1px solid #bdc3c7;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-family: inherit;
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-  }
-  
-  .form-group textarea:focus,
-  .form-group input[type="number"]:focus {
-    outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
-  }
-  
-  .form-group textarea {
-      resize: vertical; /* Allow vertical resizing */
-      min-height: 80px;
-  }
-  
-  .submit-button {
-    padding: 12px 25px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #fff;
-    background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
-    border: none;
-    border-radius: 25px; /* Rounded corners */
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
-    align-self: center; /* Center button */
-  }
-  
-  .submit-button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
-  }
-  
-  .submit-button:active:not(:disabled) {
-      transform: translateY(0px);
-      box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
-  }
-  
-  .submit-button:disabled {
-    background: #bdc3c7;
-    cursor: not-allowed;
-    box-shadow: none;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* Space between form groups */
+  padding: 25px 30px; /* Slightly more padding */
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #fdfdfd;
+  max-width: 600px; /* Constrain form width */
+  margin: 30px auto; /* Center form with more margin */
+  box-shadow: 0 3px 8px rgba(0,0,0,0.06); /* Slightly deeper shadow */
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column; /* Stack label above input */
+  gap: 8px; /* Space between label and input */
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #2c3e50; /* Darker label color */
+  font-size: 0.95rem;
+}
+
+/* Common styles for inputs and select */
+.input-form input[type="text"],
+.input-form input[type="number"],
+.input-form select {
+  width: 100%; /* Make inputs take full width */
+  padding: 10px 14px; /* Slightly more padding */
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+  box-sizing: border-box; /* Include padding and border in width */
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  background-color: #fff; /* Ensure white background */
+  color: #333; /* Default text color */
+}
+
+/* Placeholder text style */
+.input-form input::placeholder {
+    color: #999;
+    opacity: 1; /* Firefox */
+}
+.input-form input:-ms-input-placeholder { /* IE/Edge */
+    color: #999;
+}
+.input-form input::-ms-input-placeholder { /* IE/Edge */
+    color: #999;
+}
+
+
+/* Specific style for select */
+.input-form select {
+   appearance: none;
+   background-color: #fff;
+   background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2334495e%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); /* Darker arrow */
+   background-repeat: no-repeat;
+   background-position: right 12px center; /* Adjusted position */
+   background-size: 10px 10px;
+   cursor: pointer;
+   padding-right: 35px; /* Make space for the arrow */
+}
+
+
+/* Focus styles */
+.input-form input[type="text"]:focus,
+.input-form input[type="number"]:focus,
+.input-form select:focus {
+  outline: none;
+  border-color: #007bff; /* Highlight color */
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+/* Button styles */
+.submit-button {
+  padding: 12px 25px; /* More horizontal padding */
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.05rem; /* Slightly larger */
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.1s ease;
+  align-self: center;
+  margin-top: 15px; /* More space above button */
+  min-width: 180px; /* Give button a minimum width */
+  text-align: center;
+}
+
+.submit-button:hover:not(:disabled) {
+  background-color: #0056b3;
+  transform: translateY(-1px); /* Subtle lift effect */
+}
+
+.submit-button:active:not(:disabled) {
+  transform: translateY(0px); /* Push down effect */
+}
+
+
+.submit-button:disabled {
+  background-color: #b0c4de; /* Lighter blue-gray when disabled */
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* Optional: Adjust platform selector width if needed */
+#platform {
+   /* max-width: 250px; */ /* Uncomment and adjust if you want it smaller */
+}
+
+/* Responsive adjustments for form */
+@media (max-width: 650px) {
+    .input-form {
+        max-width: 95%;
+        padding: 20px 15px;
+        margin: 20px auto;
+    }
+    .submit-button {
+        width: 100%; /* Full width button on smaller screens */
+    }
+}

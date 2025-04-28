@@ -5,7 +5,6 @@ import ResultsTable from './components/ResultsTable';
 import DownloadOptions from './components/DownloadOptions';
 import './App.css';
 
-// Backend base URL (adjust if needed, e.g., different port)
 const BACKEND_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/scrape';
 
 const LOADING_STAGES = {
@@ -18,15 +17,15 @@ const LOADING_STAGES = {
 
 function App() {
     // --- State ---
-    const [platform, setPlatform] = useState('instagram'); // 'instagram' or 'tiktok'
+    const [platform, setPlatform] = useState('instagram');
 
-    // Instagram state
-    const [urls, setUrls] = useState('');
-    const [limit, setLimit] = useState(10);
+    // Instagram state - USERNAMES
+    const [instagramUsernames, setInstagramUsernames] = useState('');
+    const [limit, setLimit] = useState(10); // Keep limit for posts per username
 
     // TikTok state
-    const [hashtags, setHashtags] = useState(''); // Comma-separated string from input
-    const [resultsPerPage, setResultsPerPage] = useState(100); // Default for TikTok
+    const [hashtags, setHashtags] = useState('');
+    const [resultsPerPage, setResultsPerPage] = useState(100);
 
     // Common state
     const [csvData, setCsvData] = useState('');
@@ -51,27 +50,28 @@ function App() {
         setMessage('');
         setLoadingStage(LOADING_STAGES.INITIALIZING);
 
-        // Determine endpoint and payload based on platform
         let apiUrl = '';
         let payload = {};
-        let inputDescription = ''; // For logging
+        let inputDescription = '';
 
         if (platform === 'instagram') {
             apiUrl = `${BACKEND_BASE_URL}/instagram`;
-            const urlList = urls.split('\n').map(url => url.trim()).filter(url => url !== '');
-            if (urlList.length === 0) {
-                setError("Please enter at least one valid Instagram URL.");
+            const usernameList = instagramUsernames
+                .split(',')
+                .map(name => name.trim())
+                .filter(name => name !== '');
+
+            if (usernameList.length === 0) {
+                setError("Please enter at least one valid Instagram username.");
                 setIsLoading(false); setLoadingStage(null); return;
             }
-            payload = { urls: urlList, limit: limit };
-            inputDescription = `URLs: ${urlList.slice(0, 2).join(', ')}... Limit: ${limit}`; // Log snippet
+            // Send 'usernames' key
+            payload = { usernames: usernameList, limit: limit };
+            inputDescription = `Usernames: ${usernameList.join(', ')} Limit: ${limit}`;
 
         } else if (platform === 'tiktok') {
             apiUrl = `${BACKEND_BASE_URL}/tiktok`;
-            // Split comma-separated hashtags, trim whitespace, filter empty
-            const hashtagList = hashtags.split(',')
-                                    .map(tag => tag.trim())
-                                    .filter(tag => tag !== '');
+            const hashtagList = hashtags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
             if (hashtagList.length === 0) {
                 setError("Please enter at least one valid TikTok hashtag.");
                 setIsLoading(false); setLoadingStage(null); return;
@@ -79,8 +79,8 @@ function App() {
             payload = { hashtags: hashtagList, resultsPerPage: resultsPerPage };
             inputDescription = `Hashtags: ${hashtagList.join(', ')} Results/Page: ${resultsPerPage}`;
         } else {
-            setError("Invalid platform selected.");
-            setIsLoading(false); setLoadingStage(null); return;
+             setError("Invalid platform selected.");
+             setIsLoading(false); setLoadingStage(null); return;
         }
 
         abortControllerRef.current = new AbortController();
@@ -90,39 +90,38 @@ function App() {
         console.log(`Sending ${platform} request to ${apiUrl} with payload:`, payload);
         console.log(`Input Details: ${inputDescription}`);
 
-
         try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                signal: signal,
-            });
+             const response = await fetch(apiUrl, {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify(payload),
+                 signal: signal,
+             });
 
-            if (signal.aborted) return;
+             if (signal.aborted) return;
 
-            setLoadingStage(LOADING_STAGES.WAITING);
-            const data = await response.json();
-            if (signal.aborted) return;
-            setLoadingStage(LOADING_STAGES.PROCESSING);
+             setLoadingStage(LOADING_STAGES.WAITING);
+             const data = await response.json();
+             if (signal.aborted) return;
+             setLoadingStage(LOADING_STAGES.PROCESSING);
 
-            if (!response.ok) {
-                console.error("API Error Response:", data);
-                throw new Error(data.error || `HTTP error! Status: ${response.status}`);
-            }
+             if (!response.ok) {
+                 console.error("API Error Response:", data);
+                 throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+             }
 
-            console.log("API Success Response:", data);
-            setMessage(data.message || `Scraping successful for ${platform}!`);
-            setCsvData(data.csvData || '');
-            setJsonData(data.jsonData || null); // Store JSON data
-            setFilename(data.filename || `${platform}_download.csv`);
-            setJsonFilename(data.jsonFilename || `${platform}_download.json`);
+             console.log("API Success Response:", data);
+             setMessage(data.message || `Scraping successful for ${platform}!`);
+             setCsvData(data.csvData || '');
+             setJsonData(data.jsonData || null);
+             setFilename(data.filename || `${platform}_download.csv`);
+             setJsonFilename(data.jsonFilename || `${platform}_download.json`);
 
         } catch (err) {
             if (err.name === 'AbortError') {
                 console.log('Fetch aborted');
                 setError('Request cancelled by user.');
-                setTimeout(() => setIsLoading(false), 500); // Show message briefly
+                setTimeout(() => setIsLoading(false), 500);
             } else {
                 console.error("Error during fetch or processing:", err);
                 setError(err.message || `Failed to fetch ${platform} data. Check console & backend.`);
@@ -136,8 +135,8 @@ function App() {
              setLoadingStage(null);
              abortControllerRef.current = null;
         }
-    // Include all relevant state variables in dependencies
-    }, [platform, urls, limit, hashtags, resultsPerPage]);
+    // Update dependencies
+    }, [platform, instagramUsernames, limit, hashtags, resultsPerPage]);
 
     const handleCancelRequest = () => {
         if (abortControllerRef.current) {
@@ -149,13 +148,14 @@ function App() {
 
     return (
         <div className="App">
-            <h1>📸 Social Media Scraper UI 🎵</h1> {/* Updated Title */}
+            <h1>📸 Social Media Scraper UI 🎵</h1>
 
             <InputForm
                 platform={platform}
                 setPlatform={setPlatform}
-                urls={urls}
-                setUrls={setUrls}
+                // Pass instagramUsernames state and setter
+                instagramUsernames={instagramUsernames}
+                setInstagramUsernames={setInstagramUsernames}
                 limit={limit}
                 setLimit={setLimit}
                 hashtags={hashtags}
@@ -180,18 +180,22 @@ function App() {
             {error && <div className="error-message">Error: {error}</div>}
             {message && !error && !isLoading && <div className="success-message">{message}</div>}
 
+
             {/* --- Results & Download --- */}
-             {/* Pass platform and jsonData to ResultsTable */}
-            {(jsonData && jsonData.length > 0) && !isLoading && !error && (
-              <ResultsTable jsonData={jsonData} platform={platform} />
-             )}
-            {/* Pass necessary data for downloads */}
+            {(jsonData || csvData) && !isLoading && !error && (
+              <ResultsTable
+                  jsonData={jsonData}
+                  platform={platform}
+                  csvData={csvData}
+              />
+            )}
             <DownloadOptions
                 csvData={csvData}
                 jsonData={jsonData}
                 csvFilename={filename}
                 jsonFilename={jsonFilename}
             />
+
         </div>
     );
 }

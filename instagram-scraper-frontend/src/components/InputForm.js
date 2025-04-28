@@ -1,20 +1,23 @@
 // src/components/InputForm.js
 import React from 'react';
-import './InputForm.css';
+import './InputForm.css'; // Make sure CSS is imported
 
 function InputForm({
-    platform,         // New: 'instagram' or 'tiktok'
-    setPlatform,      // New: Function to set platform
-    urls,             // Existing: For Instagram
-    setUrls,          // Existing
-    limit,            // Existing
-    setLimit,         // Existing
-    hashtags,         // New: For TikTok
-    setHashtags,      // New
-    resultsPerPage,   // New: For TikTok
-    setResultsPerPage,// New
-    onSubmit,         // Existing
-    isLoading         // Existing
+    platform,
+    setPlatform,
+    // Instagram state
+    instagramUsernames, // NEW
+    setInstagramUsernames, // NEW
+    limit,             // Keep limit
+    setLimit,          // Keep setter for limit
+    // TikTok state
+    hashtags,
+    setHashtags,
+    resultsPerPage,
+    setResultsPerPage,
+    // Common props
+    onSubmit,
+    isLoading
 }) {
 
     const handlePlatformChange = (event) => {
@@ -22,14 +25,18 @@ function InputForm({
     };
 
     const handleHashtagChange = (event) => {
-         // Store as comma-separated string for simplicity in input field
          setHashtags(event.target.value);
     };
 
+    // Handle changes for the new Instagram username input
+    const handleInstagramUsernameChange = (event) => {
+        setInstagramUsernames(event.target.value);
+    };
+
+
     return (
         <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="input-form">
-            {/* Platform Selector */}
-            <div className="form-group platform-selector">
+            <div className="form-group"> {/* Wrap platform select */}
                 <label htmlFor="platform">Select Platform:</label>
                 <select id="platform" value={platform} onChange={handlePlatformChange} disabled={isLoading}>
                     <option value="instagram">Instagram</option>
@@ -41,21 +48,21 @@ function InputForm({
             {platform === 'instagram' && (
                 <>
                     <div className="form-group">
-                        <label htmlFor="urls">Instagram Profile/Post URLs (one per line):</label>
-                        <textarea
-                            id="urls"
-                            value={urls}
-                            onChange={(e) => setUrls(e.target.value)}
-                            rows="4"
-                            placeholder="e.g.
-https://www.instagram.com/nasa/
-https://www.instagram.com/p/C..."
+                        {/* Changed Label and Input */}
+                        <label htmlFor="instagram-usernames">Instagram Usernames (comma-separated):</label>
+                        <input
+                            id="instagram-usernames"
+                            type="text"
+                            value={instagramUsernames}
+                            onChange={handleInstagramUsernameChange} // Use new handler
+                            placeholder="e.g. nasa, spacex, natgeo" // Updated placeholder
                             disabled={isLoading}
                             required
                         />
                     </div>
                     <div className="form-group">
-                        <label htmlFor="limit">Max Posts per Profile/Input URL:</label>
+                        {/* Label might need adjustment depending on actor */}
+                        <label htmlFor="limit">Max Posts per Username:</label>
                         <input
                             id="limit"
                             type="number"
@@ -84,13 +91,11 @@ https://www.instagram.com/p/C..."
                         />
                     </div>
                     <div className="form-group">
-                         {/* Using 'resultsPerPage' to match TikTok actor input */}
-                        <label htmlFor="resultsPerPage">Results Per Page (per Hashtag):</label>
+                        <label htmlFor="resultsPerPage">Results Limit (per Hashtag):</label> {/* Simplified label */}
                         <input
                             id="resultsPerPage"
                             type="number"
                             min="1"
-                            // max="1000" // Actor might have a limit
                             value={resultsPerPage}
                             onChange={(e) => setResultsPerPage(Math.max(1, parseInt(e.target.value, 10) || 1))}
                             disabled={isLoading}
@@ -100,7 +105,7 @@ https://www.instagram.com/p/C..."
                 </>
             )}
 
-
+            {/* Submit Button remains the same */}
             <button type="submit" disabled={isLoading} className="submit-button">
                 {isLoading ? 'Scraping...' : 'Start Scraping'}
             </button>
