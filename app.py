@@ -15,19 +15,13 @@ APIFY_TOKEN = os.getenv("APIFY_TOKEN")
 
 # --- Flask App Setup ---
 app = Flask(__name__)
-# Allow requests from your React app's origin (e.g., http://localhost:3000)
-# For development, '*' is often okay, but be more specific in production.
-# Make sure this matches your React dev server or production domain.
-CORS(app, resources={r"/api/*": {"origins": "*"}}) # Enable CORS for /api routes
+CORS(app, resources={r"/api/*": {"origins": "*"}}) # Enable CORS for all /api/* routes
 
 # --- Helper Functions & Configuration ---
 
-# Check if the API token is loaded (critical)
 if not APIFY_TOKEN:
     print("CRITICAL ERROR: APIFY_TOKEN not found in environment variables.")
-    # Consider raising an exception or exiting if token is essential for startup
     # exit() # Uncomment to force exit if token is missing
-
 
 def initialize_apify_client():
     """Initializes and returns the ApifyClient or None if token is missing."""
@@ -36,151 +30,256 @@ def initialize_apify_client():
         return None
     return ApifyClient(APIFY_TOKEN)
 
-# Predefined fieldnames ensure consistent CSV structure
-CSV_FIELDNAMES = [
+# --- Fieldnames for Different Platforms ---
+INSTAGRAM_CSV_FIELDNAMES = [
     'inputUrl', 'id', 'type', 'shortCode', 'caption', 'url',
     'commentsCount', 'firstComment', 'likesCount', 'timestamp',
     'ownerFullName', 'ownerUsername', 'ownerId', 'displayUrl',
     'alt', 'isSponsored'
 ]
 
-# --- Flask API Route ---
+# Define fieldnames based on the provided TikTok sample output
+TIKTOK_CSV_FIELDNAMES = [
+    'authorName', 'authorUsername', 'authorAvatar', 'text', 'diggCount',
+    'shareCount', 'playCount', 'commentCount', 'collectCount',
+    'videoDuration', 'musicName', 'musicAuthor', 'musicOriginal',
+    'createTimeISO', 'webVideoUrl', 'hashtagInput' # Added hashtagInput for context
+]
 
-@app.route('/api/scrape', methods=['POST']) # API endpoint, accepts POST
-def scrape_api():
-    """API endpoint to handle scraping requests."""
+def clean_csv_value(value):
+    """Cleans a value for CSV insertion."""
+    if isinstance(value, str):
+        # Replace newline variations and tabs with a space
+        cleaned = value.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+        # Remove leading/trailing whitespace
+        return cleaned.strip()
+    return value # Return other types (like numbers) as is
+
+# --- Flask API Routes ---
+
+# --- Instagram Endpoint (Renamed from /api/scrape) ---
+@app.route('/api/scrape/instagram', methods=['POST'])
+def scrape_instagram_api():
+    """API endpoint to handle Instagram scraping requests."""
     client = initialize_apify_client()
     if not client:
-        # Return a JSON error response
         return jsonify({"error": "Server configuration error: Apify API token is missing."}), 500
 
-    # --- Get Input from JSON Body ---
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid request: No JSON body found."}), 400
 
-    urls_input = data.get('urls') # Expecting a list of URLs
+    urls_input = data.get('urls')
     try:
-        # Default to 10 if limit isn't provided or invalid
         results_limit_per_profile = int(data.get('limit', 10))
         if results_limit_per_profile < 1:
-            results_limit_per_profile = 1 # Ensure limit is at least 1
+            results_limit_per_profile = 1
     except (ValueError, TypeError):
-         return jsonify({"error": "Invalid 'limit' value. Must be a positive integer."}), 400
+        return jsonify({"error": "Invalid 'limit' value. Must be a positive integer."}), 400
 
     if not urls_input or not isinstance(urls_input, list):
-         return jsonify({"error": "Invalid 'urls' value. Must be a non-empty list of strings."}), 400
+        return jsonify({"error": "Invalid 'urls' value. Must be a non-empty list of strings."}), 400
 
-    # Filter out any potentially empty strings and validate content
     input_urls = []
     for url in urls_input:
         if isinstance(url, str) and url.strip():
-             # Basic check for plausible Instagram URL structure
-             if "instagram.com" in url.strip() and url.strip().startswith("http"):
-                 input_urls.append(url.strip())
-             else:
-                 print(f"API Warning: Skipping potentially invalid URL format: {url}")
-                 # Optionally return an error if strict validation is needed:
-                 # return jsonify({"error": f"Invalid URL format provided: {url}. Must be a valid Instagram URL."}), 400
+            if "instagram.com" in url.strip() and url.strip().startswith("http"):
+                input_urls.append(url.strip())
+            else:
+                print(f"API Warning (Instagram): Skipping potentially invalid URL format: {url}")
+                # Optionally return an error here if needed
 
     if not input_urls:
-         return jsonify({"error": "No valid Instagram URLs provided in the 'urls' list."}), 400
+        return jsonify({"error": "No valid Instagram URLs provided in the 'urls' list."}), 400
 
-
-    # --- Configure Apify Actor Input ---
     run_input = {
         "directUrls": input_urls,
         "resultsType": "posts",
         "resultsLimit": results_limit_per_profile,
-        # --- CHANGE THIS LINE ---
-        "searchType": "user",  # Set to a valid enum value like 'user'
-        # ------------------------
-        "searchLimit": 1,        # This might be ignored when directUrls is used, but keep it valid
+        "searchType": "user", # Ensure this is valid for the actor used
+        "searchLimit": 1,
         "addParentData": False,
     }
 
-    print(f"API: Starting Instagram scraper for: {', '.join(input_urls)} with limit {results_limit_per_profile}")
+    print(f"API (Instagram): Starting scraper for: {', '.join(input_urls)} with limit {results_limit_per_profile}")
 
     try:
-        # --- Run Apify Actor ---
-        print(f"API: Calling Apify actor 'RB9HEZitC8hIUXAha' with input: {run_input}")
+        print(f"API (Instagram): Calling Apify actor 'RB9HEZitC8hIUXAha' with input: {run_input}")
+        # --- IMPORTANT: Replace 'RB9HEZitC8hIUXAha' if you use a different Instagram actor ---
         actor_run = client.actor("RB9HEZitC8hIUXAha").call(run_input=run_input)
-        print(f"API: Apify actor call finished. Run details: {actor_run}")
+        print(f"API (Instagram): Apify actor call finished. Run details: {actor_run}")
 
-        # --- Fetch Results ---
-        # Actor 'call' waits for completion, so we can directly fetch results from the run object
-        print(f"API: Fetching results from actor run...")
+        print(f"API (Instagram): Fetching results from actor run...")
         items_iterator = client.run(actor_run["id"]).dataset().iterate_items()
-        items_raw = list(items_iterator) # Get the raw list of dictionaries
+        items_raw = list(items_iterator)
 
         if not items_raw:
-            print(f"API: No items found for URLs: {', '.join(input_urls)}")
-            # Return success, but indicate no data found
+            print(f"API (Instagram): No items found for URLs: {', '.join(input_urls)}")
             return jsonify({
-                "message": "Scraping completed, but no posts found for the given URLs or criteria.",
-                "csvData": "",
-                "jsonData": [], # Return empty list for JSON
-                "filename": "",
-                "jsonFilename": ""
-             }), 200
+                "message": "Scraping completed, but no posts found for the given Instagram URLs or criteria.",
+                "csvData": "", "jsonData": [], "filename": "", "jsonFilename": ""
+            }), 200
 
-        print(f"API: Found {len(items_raw)} items. Generating CSV data...")
+        print(f"API (Instagram): Found {len(items_raw)} items. Generating CSV data...")
+
+        output_buffer = io.StringIO()
+        writer = csv.DictWriter(output_buffer, fieldnames=INSTAGRAM_CSV_FIELDNAMES, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
+        writer.writeheader()
+        for item in items_raw:
+            row_data = {field: clean_csv_value(item.get(field, '')) for field in INSTAGRAM_CSV_FIELDNAMES}
+            writer.writerow(row_data)
+
+        csv_data_string = output_buffer.getvalue()
+        output_buffer.close()
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        try:
+            first_url_part = input_urls[0].split('//')[-1].split('/')[1]
+            base_filename = f"instagram_{first_url_part}_{timestamp}"
+        except IndexError:
+            base_filename = f"instagram_posts_{timestamp}"
+
+        csv_filename = f"{base_filename}.csv"
+        json_filename = f"{base_filename}.json"
+
+        print(f"API (Instagram): Successfully generated CSV data ({len(csv_data_string)} bytes).")
+
+        return jsonify({
+            "message": f"Successfully scraped {len(items_raw)} Instagram posts.",
+            "csvData": csv_data_string,
+            "jsonData": items_raw,
+            "filename": csv_filename,
+            "jsonFilename": json_filename
+        }), 200
+
+    except Exception as e:
+        print(f"API Error (Instagram): An error occurred: {e}")
+        traceback.print_exc()
+        return jsonify({"error": f"An internal server error occurred (Instagram): {type(e).__name__} - {e}"}), 500
+
+
+# --- TikTok Endpoint ---
+@app.route('/api/scrape/tiktok', methods=['POST'])
+def scrape_tiktok_api():
+    """API endpoint to handle TikTok scraping requests."""
+    client = initialize_apify_client()
+    if not client:
+        return jsonify({"error": "Server configuration error: Apify API token is missing."}), 500
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid request: No JSON body found."}), 400
+
+    # --- Get TikTok specific inputs ---
+    hashtags_input = data.get('hashtags') # Expecting a list of hashtags
+    try:
+        # Use 'resultsPerPage' for TikTok actor
+        results_per_page = int(data.get('resultsPerPage', 100))
+        if results_per_page < 1:
+            results_per_page = 1
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid 'resultsPerPage' value. Must be a positive integer."}), 400
+
+    if not hashtags_input or not isinstance(hashtags_input, list):
+        return jsonify({"error": "Invalid 'hashtags' value. Must be a non-empty list of strings."}), 400
+
+    # Filter out empty strings
+    input_hashtags = [tag.strip() for tag in hashtags_input if isinstance(tag, str) and tag.strip()]
+
+    if not input_hashtags:
+        return jsonify({"error": "No valid hashtags provided in the 'hashtags' list."}), 400
+
+    # --- Configure TikTok Apify Actor Input ---
+    run_input = {
+        "hashtags": input_hashtags,
+        "resultsPerPage": results_per_page,
+        # Add other TikTok actor options if needed, e.g., proxyCountryCode
+        # "proxyCountryCode": "None", # Example from docs
+    }
+
+    print(f"API (TikTok): Starting scraper for hashtags: {', '.join(input_hashtags)} with results/page {results_per_page}")
+
+    try:
+        # --- Run TikTok Apify Actor ---
+        print(f"API (TikTok): Calling Apify actor 'clockworks/tiktok-scraper' with input: {run_input}")
+        actor_run = client.actor("clockworks/tiktok-scraper").call(run_input=run_input)
+        print(f"API (TikTok): Apify actor call finished. Run details: {actor_run}")
+
+        # --- Fetch Results ---
+        print(f"API (TikTok): Fetching results from actor run...")
+        items_iterator = client.run(actor_run["id"]).dataset().iterate_items()
+        items_raw = list(items_iterator)
+
+        if not items_raw:
+            print(f"API (TikTok): No items found for hashtags: {', '.join(input_hashtags)}")
+            return jsonify({
+                "message": f"Scraping completed, but no posts found for the given TikTok hashtags.",
+                "csvData": "", "jsonData": [], "filename": "", "jsonFilename": ""
+            }), 200
+
+        print(f"API (TikTok): Found {len(items_raw)} items. Generating CSV data...")
 
         # --- Generate CSV String in Memory ---
         output_buffer = io.StringIO()
-        writer = csv.DictWriter(output_buffer, fieldnames=CSV_FIELDNAMES, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
+        writer = csv.DictWriter(output_buffer, fieldnames=TIKTOK_CSV_FIELDNAMES, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
         writer.writeheader()
-        for item in items_raw: # Iterate over the stored raw items
-            # Prepare row data ensuring only defined fields are included
-            row_data = {field: item.get(field, '') for field in CSV_FIELDNAMES}
-            # Clean up potential problematic characters (newlines, tabs) for CSV
-            for key in ['caption', 'firstComment', 'alt', 'ownerFullName']: # Add other text fields if needed
-                 if row_data[key] and isinstance(row_data[key], str): # Check if it's a string
-                    # Replace newline variations and tabs with a space
-                    row_data[key] = row_data[key].replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-                    # Optional: remove leading/trailing whitespace that might remain
-                    row_data[key] = row_data[key].strip()
-            writer.writerow(row_data)
+        for item in items_raw:
+            # Prepare row data, flattening nested structures
+            row_data = {
+                'authorName': clean_csv_value(item.get('authorMeta', {}).get('name', '')),
+                'authorUsername': clean_csv_value(item.get('authorMeta', {}).get('nickName', item.get('authorMeta', {}).get('name', ''))), # Use name if nickName missing
+                'authorAvatar': clean_csv_value(item.get('authorMeta', {}).get('avatar', '')),
+                'text': clean_csv_value(item.get('text', '')),
+                'diggCount': item.get('diggCount', 0),
+                'shareCount': item.get('shareCount', 0),
+                'playCount': item.get('playCount', 0),
+                'commentCount': item.get('commentCount', 0),
+                'collectCount': item.get('collectCount', 0),
+                'videoDuration': item.get('videoMeta', {}).get('duration', 0),
+                'musicName': clean_csv_value(item.get('musicMeta', {}).get('musicName', '')),
+                'musicAuthor': clean_csv_value(item.get('musicMeta', {}).get('musicAuthor', '')),
+                'musicOriginal': item.get('musicMeta', {}).get('musicOriginal', False),
+                'createTimeISO': clean_csv_value(item.get('createTimeISO', '')),
+                'webVideoUrl': clean_csv_value(item.get('webVideoUrl', '')),
+                'hashtagInput': clean_csv_value(item.get('hashtagInput', ', '.join(input_hashtags))) # Store which hashtags led to this result
+            }
+            # Ensure only defined fields are written (extrasaction='ignore' handles extras)
+            # Keep only keys present in TIKTOK_CSV_FIELDNAMES for the row
+            filtered_row = {k: v for k, v in row_data.items() if k in TIKTOK_CSV_FIELDNAMES}
+            writer.writerow(filtered_row)
+
 
         csv_data_string = output_buffer.getvalue()
         output_buffer.close()
 
         # --- Prepare Response ---
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        # Generate a base filename (e.g., remove https://www, replace / with _)
-        # This is a simple example, could be made more robust
-        try:
-            first_url_part = input_urls[0].split('//')[-1].split('/')[1] # Get username/post ID part
-            base_filename = f"instagram_{first_url_part}_{timestamp}"
-        except IndexError:
-            base_filename = f"instagram_posts_{timestamp}" # Fallback
-
+        first_hashtag = input_hashtags[0].replace(" ", "_") # Simple filename based on first hashtag
+        base_filename = f"tiktok_{first_hashtag}_{timestamp}"
         csv_filename = f"{base_filename}.csv"
-        json_filename = f"{base_filename}.json" # Suggest a JSON filename too
+        json_filename = f"{base_filename}.json"
 
-        print(f"API: Successfully generated CSV data ({len(csv_data_string)} bytes).")
+        print(f"API (TikTok): Successfully generated CSV data ({len(csv_data_string)} bytes).")
 
-        # --- Return JSON response with CSV, raw JSON data, and filenames ---
+        # --- Return JSON response ---
         return jsonify({
-            "message": f"Successfully scraped {len(items_raw)} posts.",
+            "message": f"Successfully scraped {len(items_raw)} TikTok posts.",
             "csvData": csv_data_string,
             "jsonData": items_raw,      # Include the raw data list
-            "filename": csv_filename,   # Filename for CSV
-            "jsonFilename": json_filename # Filename for JSON
+            "filename": csv_filename,
+            "jsonFilename": json_filename
         }), 200
 
     except Exception as e:
-        print(f"API Error: An error occurred during scraping or processing: {e}")
-        # Log the full error traceback for debugging on the server
+        print(f"API Error (TikTok): An error occurred: {e}")
         traceback.print_exc()
-        # Return a generic error message to the client, including the error type
-        return jsonify({"error": f"An internal server error occurred: {type(e).__name__} - {e}"}), 500
+        # Return a generic error message to the client
+        return jsonify({"error": f"An internal server error occurred (TikTok): {type(e).__name__} - {e}"}), 500
 
 
 # --- Run the Flask App ---
 if __name__ == '__main__':
-    # Make sure it runs on a port different from React Dev Server (e.g., 5000)
-    # host='0.0.0.0' makes it accessible on your network
-    # Set debug=False for production environments
     print("Starting Flask server on http://0.0.0.0:5000")
+    # Use debug=True for development ONLY. Set to False for production.
+    # Use port 5001 if 5000 is taken or if you prefer separation
     app.run(debug=True, host='0.0.0.0', port=5000)
