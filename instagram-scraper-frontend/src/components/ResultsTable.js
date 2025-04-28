@@ -13,12 +13,26 @@ import './ResultsTable.css'; // Ensure CSS is imported
 
 // --- Helper Functions ---
 const tryParseInt = (value) => {
+    // Safely parses integers, returning original value if not parsable.
     if (value === null || value === undefined || value === '') return value;
     const stringValue = String(value).trim();
     if (stringValue === '') return value;
     const parsed = parseInt(stringValue, 10);
     return isNaN(parsed) ? value : parsed;
 };
+
+const formatHeader = (key) => {
+    // Formats keys like 'ownerUsername' or 'displayUrl' into 'Owner Username' or 'Display URL'.
+    if (!key) return '';
+    return String(key)
+        .replace(/([A-Z])/g, ' $1') // Add space before caps
+        .replace(/[._]/g, ' ')      // Replace underscores or dots with space
+        .replace(/\b\w/g, char => char.toUpperCase()) // Capitalize first letter of each word
+        .replace('Url', ' URL') // Specific formatting for 'Url'
+        .replace('Id', ' ID')   // Specific formatting for 'Id'
+        .trim();
+};
+
 
 // --- Component ---
 function ResultsTable({ csvData, jsonData, platform }) {
@@ -29,114 +43,97 @@ function ResultsTable({ csvData, jsonData, platform }) {
         pageSize: 10,
     });
 
-    // --- Data and Header Preparation (Keep existing logic) ---
+    // --- Data and Header Preparation ---
+    // Determines the data array and the ordered list of headers to use.
     const { headers: orderedHeaders, data: tableData } = useMemo(() => {
-        // ... (Your existing robust data/header logic - no changes needed here) ...
         let explicitHeaders = [];
         let data = [];
 
-        // 1. Try CSV for header order
+        // 1. Try to get header order from CSV first (most reliable source for order)
         if (csvData) {
             try {
                 const csvParseResult = Papa.parse(csvData, { header: false, skipEmptyLines: 'greedy', preview: 1 });
                 if (csvParseResult.data && csvParseResult.data.length > 0 && csvParseResult.data[0].length > 0) {
+                    // Use headers from the first row of CSV
                     explicitHeaders = csvParseResult.data[0].map(h => h ? String(h).trim() : '');
                     console.log("Derived explicit header order from CSV:", explicitHeaders);
-                } else {
-                    console.warn("CSV header row empty or parsing failed for headers.");
-                }
-            } catch (csvError) {
-                 console.error("Error parsing CSV for headers:", csvError);
-            }
+                } else { console.warn("CSV header row empty or parsing failed for headers."); }
+            } catch (csvError) { console.error("Error parsing CSV for headers:", csvError); }
         }
 
-        // 2. Determine data source (prefer JSON if available)
+        // 2. Determine data source (prefer JSON for richer data types)
         if (jsonData && jsonData.length > 0) {
-            data = jsonData;
+            data = jsonData; // Use JSON array as the primary data source
             console.log(`Using ${platform} jsonData (${data.length} rows) for table`);
-             if (explicitHeaders.length === 0 && data.length > 0) {
-                console.warn("Falling back to platform-specific keys for header order (CSV headers unavailable)");
-                 if (platform === 'tiktok') {
-                    explicitHeaders = [ // Define a consistent fallback order
-                        'authorMeta.avatar', 'authorMeta.name', 'text', 'diggCount', 'shareCount',
-                        'playCount', 'commentCount', 'collectCount', 'videoMeta.duration',
-                        'musicMeta.musicName', 'webVideoUrl', 'createTimeISO'
-                    ];
-                    console.log("Using predefined TikTok keys as fallback headers");
-                 } else { // Assume Instagram or default
-                     // Use specific IG fallback order if needed, otherwise keys from first item
-                     explicitHeaders = [
-                        'type', 'displayUrl', 'caption', 'likesCount', 'url',
-                        'ownerUsername', 'timestamp', 'commentsCount', 'shortCode', 'id'
-                        // Add other common keys you might want as fallbacks
-                     ].filter(key => key in data[0]); // Only include keys actually present
-                     // If still empty, use all keys
-                     if (explicitHeaders.length === 0) {
-                         explicitHeaders = Object.keys(data[0]);
-                     }
-                     console.log("Using Instagram fallback/JSON keys from first item as fallback headers:", explicitHeaders);
-                 }
+             // If headers weren't derived from CSV, try getting them from JSON keys
+             if (explicitHeaders.length === 0 && data.length > 0 && data[0]) {
+                console.warn("Deriving headers from JSON keys (order not guaranteed)");
+                // Get all unique keys from all JSON objects
+                const allKeys = new Set();
+                data.forEach(item => Object.keys(item).forEach(key => allKeys.add(key)));
+                explicitHeaders = Array.from(allKeys);
+                // Ensure 'displayUrl' is included if present in data, as it's often important
+                if (data[0].hasOwnProperty('displayUrl') && !explicitHeaders.includes('displayUrl')) {
+                    // Attempt to insert it after 'type' or near the beginning if possible
+                    const typeIndex = explicitHeaders.indexOf('type');
+                    if (typeIndex !== -1) {
+                         explicitHeaders.splice(typeIndex + 1, 0, 'displayUrl');
+                    } else {
+                         explicitHeaders.unshift('displayUrl'); // Add to beginning if type not found
+                    }
+                    console.log("Ensured 'displayUrl' is included in headers derived from JSON keys.")
+                }
              }
         } else if (csvData) {
-            // Fallback to parsing full CSV for data
+            // Fallback to parsing full CSV for data if JSON is missing
             console.log("Parsing full csvData for table rows (JSON not available)");
             try {
                 const fullCsvResult = Papa.parse(csvData, { header: true, skipEmptyLines: 'greedy', transformHeader: header => header ? String(header).trim() : '' });
                 if (fullCsvResult.data) {
                     data = fullCsvResult.data.map(row => { // Apply type conversions
                          const newRow = { ...row };
+                         // Define keys to attempt parsing as numbers
                          const numericKeys = ['commentsCount', 'likesCount', 'ownerId', 'diggCount', 'shareCount', 'playCount', 'commentCount', 'collectCount', 'videoMeta.duration', 'dimensionsHeight', 'dimensionsWidth', 'videoViewCount', 'videoPlayCount'];
-                         numericKeys.forEach(key => {
-                             if (newRow.hasOwnProperty(key)) newRow[key] = tryParseInt(newRow[key]);
-                         });
+                         numericKeys.forEach(key => { if (newRow.hasOwnProperty(key)) newRow[key] = tryParseInt(newRow[key]); });
+                         // Define keys to attempt parsing as booleans
                          const booleanKeys = ['isSponsored', 'musicMeta.musicOriginal'];
-                         booleanKeys.forEach(key => {
-                             if (newRow.hasOwnProperty(key)) {
-                                 const val = String(newRow[key]).toUpperCase();
-                                 if (val === 'TRUE') newRow[key] = true;
-                                 else if (val === 'FALSE') newRow[key] = false;
-                             }
-                         });
+                         booleanKeys.forEach(key => { if (newRow.hasOwnProperty(key)) { const val = String(newRow[key]).toUpperCase(); if (val === 'TRUE') newRow[key] = true; else if (val === 'FALSE') newRow[key] = false; } });
                          return newRow;
                      });
                      console.log(`Parsed ${data.length} rows from CSV data.`);
+                    // If headers still missing, use headers from the CSV parse meta
                     if (explicitHeaders.length === 0 && fullCsvResult.meta.fields) {
                          explicitHeaders = fullCsvResult.meta.fields;
                          console.log("Using headers derived from full CSV parse:", explicitHeaders);
                      }
-                } else {
-                     console.warn("Full CSV parsing returned no data.");
-                }
-                 if (fullCsvResult.errors && fullCsvResult.errors.length > 0) {
-                     console.warn("CSV Parsing Issues for Table Data:", fullCsvResult.errors);
-                 }
-            } catch (csvError) {
-                console.error("Error parsing full CSV for data:", csvError);
-                data = [];
-            }
-        } else {
-            console.log("No data (JSON or CSV) provided to ResultsTable");
-        }
+                     // Ensure 'displayUrl' from CSV parse if missed
+                     if (fullCsvResult.meta.fields && fullCsvResult.meta.fields.includes('displayUrl') && !explicitHeaders.includes('displayUrl')){
+                         explicitHeaders.push('displayUrl');
+                     }
+                } else { console.warn("Full CSV parsing returned no data."); }
+                 if (fullCsvResult.errors && fullCsvResult.errors.length > 0) console.warn("CSV Parsing Issues for Table Data:", fullCsvResult.errors);
+            } catch (csvError) { console.error("Error parsing full CSV for data:", csvError); data = []; }
+        } else { console.log("No data (JSON or CSV) provided to ResultsTable"); }
 
-        if (explicitHeaders.length === 0 && data.length > 0) {
+        // Final fallback if headers are still missing
+        if (explicitHeaders.length === 0 && data.length > 0 && data[0]) {
             console.warn("No headers could be determined, attempting fallback from first data row keys.");
             explicitHeaders = Object.keys(data[0]);
         }
+        // Ensure headers are unique and non-empty
+        explicitHeaders = [...new Set(explicitHeaders.filter(h => h))];
 
-        return { headers: explicitHeaders.filter(h => h), data: data };
+        return { headers: explicitHeaders, data: data };
 
     }, [csvData, jsonData, platform]);
 
 
-    // --- Column Definitions (MODIFIED based on platform) ---
+    // --- Column Definitions ---
+    // Creates the column configuration array based on the platform and derived headers.
     const columns = useMemo(() => {
-        console.log(`Regenerating columns for platform: ${platform} using headers:`, orderedHeaders);
-        if (!orderedHeaders || orderedHeaders.length === 0) {
-            console.log("No headers available to generate columns.");
-            return [];
-        }
+        console.log(`Regenerating columns for platform: ${platform}`);
 
-        // ----- TIKTOK COLUMN CONFIG -----
+        // ----- TIKTOK COLUMN CONFIG (Specific structure) -----
         if (platform === 'tiktok') {
             const tiktokColConfig = [
                 { key: 'authorMeta.avatar', header: "Avatar", isImage: true, isAvatar: true, width: 70, enableSorting: false },
@@ -152,137 +149,134 @@ function ResultsTable({ csvData, jsonData, platform }) {
                 { key: 'webVideoUrl', header: 'Video URL', isLink: true, width: 90 },
                 { key: 'createTimeISO', header: 'Timestamp', isDate: true, width: 200 },
             ];
-
-            // Map ordered headers (from CSV/fallback) to the desired config
-            return orderedHeaders.map(headerKey => {
-                const colInfo = tiktokColConfig.find(c => c.key === headerKey) || { key: headerKey, header: headerKey, width: 150 }; // Basic fallback
-                return {
-                    accessorKey: colInfo.key,
-                    header: () => <span>{colInfo.header || headerKey}</span>,
-                    size: colInfo.width,
-                    enableSorting: colInfo.enableSorting !== false,
-                    meta: { // Pass flags to cell renderer via meta
-                        isNumeric: colInfo.isNumeric,
-                        isImage: colInfo.isImage,
-                        isAvatar: colInfo.isAvatar, // Differentiate avatar images
-                        isLink: colInfo.isLink,
-                        isTruncated: colInfo.isTruncated,
-                        isDate: colInfo.isDate,
-                    },
-                    cell: info => { // Generic cell renderer using meta flags
-                        const value = info.getValue();
-                        const meta = info.column.columnDef.meta;
-                        if (value === null || value === undefined) return <span className="cell-nodata"></span>;
-
-                        if (meta?.isImage && typeof value === 'string' && value.startsWith('http')) {
-                             // Use specific class for avatar vs generic image
-                            const imgClass = meta.isAvatar ? 'table-avatar' : 'table-image-preview';
-                            return <img src={value} alt={colInfo.header} className={imgClass} loading="lazy" onError={(e) => { e.target.style.display='none'; e.target.onerror=null; }} />;
-                        }
-                        if (meta?.isLink && typeof value === 'string' && value.startsWith('http')) {
-                            return <a href={value} target="_blank" rel="noopener noreferrer" title={value}>Link</a>;
-                        }
-                        if (meta?.isDate) {
-                            try { const date = new Date(value); if (!isNaN(date.getTime())) return <span title={date.toISOString()}>{date.toLocaleString()}</span>; } catch (e) { /* Ignore */ }
-                        }
-
-                        const stringValue = String(value);
-                        const needsTitle = meta?.isTruncated && stringValue.length > 50;
-                        return <span className={meta?.isTruncated ? 'truncate' : ''} title={needsTitle ? stringValue : undefined}>{stringValue}</span>;
-                    },
-                };
-            }).filter(col => col.accessorKey); // Ensure we only have valid columns
-        }
-
-        // ----- INSTAGRAM COLUMN CONFIG -----
-        else if (platform === 'instagram') {
-             const instagramColConfig = [
-                { key: 'type', header: 'Type', width: 90 },
-                { key: 'displayUrl', header: 'Media', isImage: true, width: 100, enableSorting: false }, // Not avatar
-                { key: 'caption', header: 'Caption', isTruncated: true, width: 400 }, // More width needed
-                { key: 'likesCount', header: 'Likes', isNumeric: true, width: 100 },
-                { key: 'commentsCount', header: 'Comments', isNumeric: true, width: 110 },
-                { key: 'url', header: 'Post URL', isLink: true, width: 90 },
-                { key: 'ownerUsername', header: 'Username', width: 180 },
-                { key: 'timestamp', header: 'Timestamp', isDate: true, width: 200 },
-                { key: 'shortCode', header: 'Shortcode', width: 120 },
-                // Add other desired fields here with their config
-                // { key: 'ownerFullName', header: 'Owner Name', width: 180 },
-                // { key: 'isSponsored', header: 'Sponsored', isBool: true, width: 100 },
-             ];
-
-             // Map the available ordered headers to this config
-             return orderedHeaders.map(headerKey => {
-                 const colInfo = instagramColConfig.find(c => c.key === headerKey) || { key: headerKey, header: headerKey, width: 150 }; // Basic fallback
-                 return {
-                     accessorKey: colInfo.key,
-                     header: () => { /* Header formatting */
-                         const formattedHeader = (colInfo.header || headerKey)
-                             .replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')
-                             .replace(/^./, str => str.toUpperCase());
-                         return <span>{formattedHeader}</span>;
-                     },
-                     size: colInfo.width,
-                     enableSorting: colInfo.enableSorting !== false,
-                     meta: { // Pass flags
-                         isNumeric: colInfo.isNumeric,
-                         isImage: colInfo.isImage,
-                         isLink: colInfo.isLink,
-                         isTruncated: colInfo.isTruncated,
-                         isDate: colInfo.isDate,
-                         isBool: colInfo.isBool,
-                     },
-                     cell: info => { // Generic cell renderer
-                        const value = info.getValue();
-                        const meta = info.column.columnDef.meta;
-                        if (value === null || value === undefined) return <span className="cell-nodata"></span>;
-
-                        if (meta?.isImage && typeof value === 'string' && value.startsWith('http')) {
-                            return <img src={value} alt={colInfo.header} className="table-image-preview" loading="lazy" onError={(e) => { e.target.style.display='none'; e.target.onerror=null; }} />;
-                        }
-                        if (meta?.isLink && typeof value === 'string' && value.startsWith('http')) {
-                            return <a href={value} target="_blank" rel="noopener noreferrer" title={value}>Link</a>;
-                        }
-                        if (meta?.isDate) {
-                            try { const date = new Date(value); if (!isNaN(date.getTime())) return <span title={date.toISOString()}>{date.toLocaleString()}</span>; } catch (e) { /* Ignore */ }
-                        }
-                         if (meta?.isBool) {
-                             return typeof value === 'boolean' ? (value ? <span style={{ color: 'green', fontWeight: 'bold' }}>✓ True</span> : <span style={{ color: 'red' }}>✗ False</span>) : <span>{String(value)}</span>;
-                         }
-
-                        const stringValue = String(value);
-                        const needsTitle = meta?.isTruncated && stringValue.length > 50;
-                        return <span className={meta?.isTruncated ? 'truncate' : ''} title={needsTitle ? stringValue : undefined}>{stringValue}</span>;
-                     },
-                     sortingFn: (rowA, rowB, columnId) => { // Sorting logic
-                         const valA = rowA.getValue(columnId);
-                         const valB = rowB.getValue(columnId);
-                         if (colInfo.isNumeric) { // Use the flag
-                             const numA = tryParseInt(valA);
-                             const numB = tryParseInt(valB);
-                             if (typeof numA === 'number' && typeof numB === 'number') return numA - numB;
-                         }
-                         return String(valA ?? '').localeCompare(String(valB ?? ''));
-                     },
-                 };
-             }).filter(col => col.accessorKey); // Filter out potential invalid columns if headers don't match perfectly
-        }
-        // Fallback for any other platform (or if platform prop is missing)
-        else {
-             console.warn(`No specific column configuration for platform: ${platform}. Using generic approach.`);
-             return orderedHeaders.map(headerKey => ({
-                 accessorKey: headerKey,
-                 header: () => <span>{headerKey}</span>, // Basic header
-                 cell: info => <span>{String(info.getValue() ?? '')}</span>, // Basic cell
-                 enableSorting: true,
-                 size: 150, // Default size
+            // Iterate directly over the config to create columns
+            return tiktokColConfig.map(colInfo => ({
+                accessorKey: colInfo.key,
+                header: () => <span>{colInfo.header}</span>,
+                size: colInfo.width,
+                enableSorting: colInfo.enableSorting !== false,
+                meta: { isNumeric: colInfo.isNumeric, isImage: colInfo.isImage, isAvatar: colInfo.isAvatar, isLink: colInfo.isLink, isTruncated: colInfo.isTruncated, isDate: colInfo.isDate },
+                cell: info => { /* Generic cell renderer for TikTok */
+                    const value = info.getValue(); const meta = info.column.columnDef.meta;
+                    if (value === null || value === undefined) return <span className="cell-nodata"></span>;
+                    if (meta?.isImage) { const imgClass = meta.isAvatar ? 'table-avatar' : 'table-image-preview'; return <img src={value} alt={colInfo.header} className={imgClass} loading="lazy" onError={(e) => { e.target.style.display='none'; e.target.onerror=null; }} />; }
+                    if (meta?.isLink) { return <a href={value} target="_blank" rel="noopener noreferrer" title={value}>Link</a>; }
+                    if (meta?.isDate) { try { const date = new Date(value); if (!isNaN(date.getTime())) return <span title={date.toISOString()}>{date.toLocaleString()}</span>; } catch (e) {} return <span>{String(value)}</span>; }
+                    const stringValue = String(value); const needsTitle = meta?.isTruncated && stringValue.length > 50;
+                    return <span className={meta?.isTruncated ? 'truncate' : ''} title={needsTitle ? stringValue : undefined}>{stringValue}</span>;
+                },
              }));
         }
 
-    }, [platform, orderedHeaders, tableData]); // Regenerate when these change
+        // ----- DYNAMIC COLUMNS FOR INSTAGRAM (and others) -----
+        // Generates columns based on the available headers, inferring types.
+        else {
+            if (!orderedHeaders || orderedHeaders.length === 0) {
+                console.error(`Cannot generate columns for ${platform}: No headers derived.`);
+                return []; // Important: return empty array if no headers
+            }
+            console.log(`Generating dynamic columns for ${platform} based on headers:`, orderedHeaders);
+
+            return orderedHeaders.map(headerKey => {
+                 // Infer column properties based on the header key
+                 const lowerHeader = headerKey.toLowerCase();
+                 const isNumeric = /count|id$|width|height|duration|playcount|viewcount/i.test(headerKey) && !lowerHeader.includes('url') && lowerHeader !== 'ownerid'; // Refined numeric check
+                 const isImage = false; // ** Treat displayUrl as link by default **
+                 const isAvatar = lowerHeader.includes('avatar'); // Still useful if avatars appear elsewhere
+                 const isLink = lowerHeader.includes('url'); // Catch displayUrl, inputUrl, url, etc.
+                 const isDate = lowerHeader.includes('timestamp') || lowerHeader.includes('date');
+                 const isBool = lowerHeader.startsWith('is');
+                 // Define which keys represent arrays that should be specially handled
+                 const isArray = ['hashtags', 'mentions', 'latestcomments', 'childposts', 'images'].includes(lowerHeader);
+                 // Define which text columns should get the truncate class (and title on hover)
+                 const isTruncated = ['caption', 'text', 'alt', 'firstcomment'].includes(lowerHeader) || isArray; // Truncate long text and array summaries
+
+                 // Determine Width based on inferred type
+                 let width = 160; // Default
+                 if (isAvatar) width = 70;
+                 else if (isLink) width = 90; // Base width for links
+                 else if (isNumeric || isBool || /type/i.test(headerKey)) width = 100; // Adjusted width
+                 else if (isDate) width = 200;
+                 else if (lowerHeader.includes('username') || lowerHeader.includes('name')) width = 180;
+                 else if (lowerHeader === 'caption' || lowerHeader === 'alt') width = 400; // Wider text fields
+                 else if (lowerHeader === 'shortcode') width = 130;
+                 else if (lowerHeader === 'id') width = 180; // Wider ID
+                 else if (isArray) width = 200; // Width for array summaries
+                 // Specific width override for displayUrl link
+                 if (lowerHeader === 'displayurl') width = 250;
 
 
-    // --- Table Instance (no changes needed) ---
+                 return {
+                     accessorKey: headerKey,
+                     header: () => <span>{formatHeader(headerKey)}</span>,
+                     size: width,
+                     enableSorting: true, // Allow sorting on all dynamic columns initially
+                     meta: { isNumeric, isImage, isAvatar, isLink, isTruncated, isDate, isBool, isArray }, // Pass flags
+                     cell: info => { // Cell renderer using inferred flags
+                        const value = info.getValue();
+                        const meta = info.column.columnDef.meta;
+                        if (value === null || value === undefined) return <span className="cell-nodata"></span>;
+
+                        // Handle Arrays
+                        if (meta?.isArray) {
+                            if (Array.isArray(value)) {
+                                const displayString = value.slice(0, 5).join(', ') + (value.length > 5 ? '...' : '');
+                                const fullString = JSON.stringify(value); // Tooltip shows full array
+                                return <span title={fullString} className="truncate">{value.length > 0 ? displayString : '[]'}</span>;
+                            } else {
+                                // Show non-array value as string if isArray flag is wrongly set
+                                return <span className="truncate" title={String(value)}>{String(value)}</span>
+                            }
+                        }
+                        // Handle other Objects
+                        if (!meta?.isArray && typeof value === 'object' && value !== null) {
+                             return <span title={JSON.stringify(value)} className="truncate">{'{...}'}</span>;
+                        }
+
+                        // **** Render LINKS (including displayUrl) ****
+                        if (meta?.isLink && typeof value === 'string' && value.startsWith('http')) {
+                            const linkText = lowerHeader === 'displayurl' ? 'Media Link' : 'Link'; // Specific text for displayUrl
+                            return <a href={value} target="_blank" rel="noopener noreferrer" title={value}>{linkText}</a>;
+                        }
+
+                        // Render Images (only if isImage flag happens to be true for a non-URL column)
+                        if (meta?.isImage && typeof value === 'string' && value.startsWith('http')) {
+                             const imgClass = meta.isAvatar ? 'table-avatar' : 'table-image-preview';
+                             return <img src={value} alt={formatHeader(headerKey)} className={imgClass} loading="lazy" onError={(e) => { e.target.style.display='none'; e.target.onerror=null; }} />;
+                        }
+                        // Render Dates
+                         if (meta?.isDate) {
+                            try { const date = new Date(value); if (!isNaN(date.getTime())) return <span title={date.toISOString()}>{date.toLocaleString()}</span>; } catch (e) { /* Ignore parsing error */ }
+                            return <span>{String(value)}</span>; // Fallback to string
+                         }
+                         // Render Booleans
+                         if (meta?.isBool) {
+                             const boolVal = String(value).toLowerCase();
+                             if (boolVal === 'true') return <span style={{ color: 'green', fontWeight: 'bold' }}>✓ True</span>;
+                             if (boolVal === 'false') return <span style={{ color: 'red' }}>✗ False</span>;
+                             return <span>{String(value)}</span>; // Fallback
+                         }
+
+                        // Default: Render as string, apply truncate class + title *only if* isTruncated flag is true
+                        const stringValue = String(value);
+                        const tooltip = meta?.isTruncated ? stringValue : undefined; // Tooltip only for truncated columns
+                        return <span className={meta?.isTruncated ? 'truncate' : ''} title={tooltip}>{stringValue}</span>;
+                     },
+                     sortingFn: (rowA, rowB, columnId) => { // Sorting logic
+                         const valA = rowA.getValue(columnId); const valB = rowB.getValue(columnId);
+                         if (isNumeric) { const numA = tryParseInt(valA); const numB = tryParseInt(valB); if (typeof numA === 'number' && typeof numB === 'number') return numA - numB; }
+                         if (isArray) { return String(valA).localeCompare(String(valB));} // Sort arrays as strings
+                         return String(valA ?? '').localeCompare(String(valB ?? ''));
+                     },
+                 };
+             });
+        }
+
+    // Depend on platform and the derived headers for the dynamic/fallback case
+    }, [platform, orderedHeaders]);
+
+
+    // --- Table Instance ---
     const table = useReactTable({
         data: tableData ?? [],
         columns,
@@ -294,18 +288,20 @@ function ResultsTable({ csvData, jsonData, platform }) {
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
-        // debugTable: true,
     });
 
     // --- Render Logic ---
     if (!columns || columns.length === 0) {
          return (
-             <div className="results-container">
-                 <p>Table columns could not be generated. Check data or configuration.</p>
-             </div>
+            <div className="results-container">
+                { !tableData || tableData.length === 0 ? (
+                    <p style={{textAlign: 'center', fontStyle: 'italic', marginTop: '20px'}}>No data available to display.</p>
+                ) : (
+                    <p style={{textAlign: 'center', fontStyle: 'italic', marginTop: '20px'}}>Could not determine table structure from the provided data.</p>
+                )}
+            </div>
          );
     }
-
 
     return (
         <div className="results-container">
@@ -359,7 +355,7 @@ function ResultsTable({ csvData, jsonData, platform }) {
                         ))}
                         {table.getRowModel().rows.length === 0 && (
                             <tr><td colSpan={(columns?.length ?? 0) + 1} className="no-results-row">
-                                {globalFilter ? `No results match your filter "${globalFilter}".` : (tableData.length > 0 ? 'Processing resulted in empty view.' : 'No data available.')}
+                                {globalFilter ? `No results match your filter "${globalFilter}".` : 'No data available.'}
                             </td></tr>
                         )}
                     </tbody>
