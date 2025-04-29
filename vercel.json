@@ -14,30 +14,14 @@
       }
     ],
     "routes": [
-      {
+    {
         "src": "/api/(.*)",
         "dest": "/api/index"
-      },
-      {
-        "src": "/static/(.*)",
-        "dest": "/instagram-scraper-frontend/build/static/$1"
-      },
-      {
-        "src": "/favicon.ico",
-        "dest": "/instagram-scraper-frontend/build/favicon.ico"
-      },
-      {
-         "src": "/manifest.json",
-         "dest": "/instagram-scraper-frontend/build/manifest.json"
-      },
-       {
-         "src": "/logo(.*)",
-         "dest": "/instagram-scraper-frontend/build/logo$1"
-       },
-      {
+        },
+        {
         "src": "/(.*)",
-        "dest": "/instagram-scraper-frontend/build/index.html",
+        "dest": "/instagram-scraper-frontend/index.html",
         "status": 200
-      }
+        }
     ]
   }
