@@ -12,19 +12,5 @@
           "distDir": "build"
         }
       }
-    ],
-    "routes": [
-      {
-        "src": "/api/(.*)",
-        "dest": "/api/index"
-      },
-      {
-        "handle": "filesystem"
-      },
-      {
-        "src": "/.*",
-        "dest": "/index.html",
-        "status": 200
-      }
     ]
   }
