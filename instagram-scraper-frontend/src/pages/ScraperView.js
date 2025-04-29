@@ -7,7 +7,13 @@ import DownloadOptions from '../components/DownloadOptions';
 import '../App.css';
 
 // Constants can be defined here or imported
-const BACKEND_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/scrape';
+
+// For local testing
+// const BACKEND_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/scrape';
+
+// For vercel deployment
+const BACKEND_BASE_URL = process.env.REACT_APP_API_URL || '/api/scrape';
+
 const LOADING_STAGES = {
     INITIALIZING: "Initializing scraper...",
     SENDING: "Sending request...",
