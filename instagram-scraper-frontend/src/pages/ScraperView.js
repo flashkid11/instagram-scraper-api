@@ -9,10 +9,10 @@ import '../App.css';
 // Constants can be defined here or imported
 
 // For local testing
-// const BACKEND_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/scrape';
-
+const BACKEND_BASE_URL = process.env.FRONTEND_URLS || 'http://localhost:5000/api/scrape';
+console.log(BACKEND_BASE_URL)
 // For vercel deployment
-const BACKEND_BASE_URL = process.env.REACT_APP_API_URL || '/api/scrape';
+// const BACKEND_BASE_URL = process.env.REACT_APP_API_URL || '/api/scrape';
 
 const LOADING_STAGES = {
     INITIALIZING: "Initializing scraper...",
@@ -24,7 +24,7 @@ const LOADING_STAGES = {
 
 function ScraperView() {
     // --- All state related to scraping now lives here ---
-    const [platform, setPlatform] = useState('instagram');
+    const [platform, setPlatform] = useState('instagram');   
     const [instagramUsernames, setInstagramUsernames] = useState('');
     const [limit, setLimit] = useState(10);
     const [hashtags, setHashtags] = useState('');
