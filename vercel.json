@@ -1,0 +1,26 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "app.py",       
+        "use": "@vercel/python"
+      },
+      {
+        "src": "instagram-scraper-frontend/package.json",
+        "use": "@vercel/static-build",
+        "config": {
+          "distDir": "instagram-scraper-frontend/build"
+        }
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/api/(.*)",
+        "destination": "/app.py"
+      },
+      {
+        "source": "/(.*)",
+        "destination": "/index.html"
+      }
+    ]
+  }
