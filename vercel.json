@@ -2,7 +2,7 @@
     "version": 2,
     "builds": [
       {
-        "src": "app.py",
+        "src": "api/index.py",
         "use": "@vercel/python"
       },
       {
@@ -16,10 +16,10 @@
     "rewrites": [
       {
         "source": "/api/(.*)",
-        "destination": "/app.py"
+         "destination": "/api/index" 
       },
       {
-        "source": "/((?!api/|favicon.ico|static/).*)",
+        "source": "/(.*)",
         "destination": "/index.html"
       }
     ]
