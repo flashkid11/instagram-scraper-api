@@ -424,13 +424,14 @@ def scrape_instagram_api():
 
     # Prepare validated usernames for the actor input
     input_usernames = [name.strip() for name in usernames_input if isinstance(name, str) and name.strip()]
+    input_urls = [f"https://www.instagram.com/{input_username}/" for input_username in input_usernames]
     if not input_usernames:
         return jsonify({"error": "No valid Instagram usernames provided."}), 400
 
     # --- Configure Apify Actor Input for Usernames ---
     # Adapt this based on the specific actor (e.g., apify/instagram-scraper uses 'username')
     run_input = {
-        "username": input_usernames,           # Check actor docs: might be 'usernames' or 'profiles'
+        "directUrls": input_urls,           # Check actor docs: might be 'usernames' or 'profiles'
         "resultsType": "posts",                # Get posts
         "resultsLimit": results_limit_per_profile, # Limit posts per user
         # Remove fields not applicable when using username list, e.g., directUrls, searchType
