@@ -19,7 +19,7 @@
         "destination": "/app.py"
       },
       {
-        "source": "/(.*)",
+        "source": "/((?!api/|favicon.ico|static/).*)",
         "destination": "/index.html"
       }
     ]
