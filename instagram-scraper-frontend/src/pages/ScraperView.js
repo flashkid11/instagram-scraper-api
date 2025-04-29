@@ -84,6 +84,7 @@ function ScraperView() {
              const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: signal });
              if (signal.aborted) return;
              setLoadingStage(LOADING_STAGES.WAITING);
+             console.log("Response", )
              const data = await response.json();
              if (signal.aborted) return;
              setLoadingStage(LOADING_STAGES.PROCESSING);
