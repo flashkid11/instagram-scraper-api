@@ -377,8 +377,8 @@ dev_origin = "http://localhost:3000"
 allowed_origins = list(set(prod_origins + [dev_origin]))
 if not allowed_origins: allowed_origins = [dev_origin]
 
-print(f"CORS allowed origins: {allowed_origins}")
-CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
+# print(f"CORS allowed origins: {allowed_origins}")
+CORS(app)
 # ------------------------
 
 # --- Helper Functions & Configuration ---
@@ -422,7 +422,7 @@ def clean_csv_value(value): # Keep as is
     return value
 
 # --- Instagram Endpoint (Handles Usernames -> Converts to URLs) ---
-@app.route('api/index/scrape/instagram', methods=['POST'])
+@app.route('/api/index/scrape/instagram', methods=['POST'])
 def scrape_instagram_api():
     client = initialize_apify_client()
     if not client: return jsonify({"error": "Server configuration error: Apify Client unavailable."}), 500
@@ -531,7 +531,7 @@ def scrape_instagram_api():
 
 
 # --- TikTok Endpoint (Keep as is) ---
-@app.route('api/index/scrape/tiktok', methods=['POST'])
+@app.route('/api/index/scrape/tiktok', methods=['POST'])
 def scrape_tiktok_api():
     # ... (Existing TikTok logic remains unchanged) ...
     client = initialize_apify_client()
