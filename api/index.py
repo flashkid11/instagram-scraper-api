@@ -81,45 +81,26 @@ def _build_cors_preflight_response():
     return response
 
 
-# --- Instagram Endpoint ---
-# **** Make sure OPTIONS is listed in methods ****
-@app.route('/api/index/scrape/instagram', methods=['POST', 'OPTIONS'])
+@app.route('/scrape/instagram', methods=['POST', 'OPTIONS'])
 def scrape_instagram_api():
-    # **** Manually handle the OPTIONS preflight request ****
     if request.method == 'OPTIONS':
-        print("Handling OPTIONS request for /api/index/scrape/instagram")
+        print("Handling OPTIONS request for /scrape/instagram") # Log corrected path
         return _build_cors_preflight_response()
 
-    # --- Existing POST Logic ---
-    # (This code only runs if request.method == 'POST')
-    print("Handling POST request for /api/index/scrape/instagram")
-    client = initialize_apify_client()
+    print("Handling POST request for /scrape/instagram") # Log corrected path
+    # --- Existing POST Logic (No changes needed inside here) ---
+    client = initialize_apify_client(); # ... (rest of instagram logic) ...
     if not client: return jsonify({"error": "Server configuration error: Apify Client unavailable."}), 500
-
-    data = request.get_json()
+    data = request.get_json(); # ... (rest of validation) ...
     if not data: return jsonify({"error": "Invalid request: No JSON body found."}), 400
-
-    usernames_input = data.get('usernames')
-    try:
-        results_limit = int(data.get('limit', 10))
-        if results_limit < 1: results_limit = 1
-    except (ValueError, TypeError):
-        return jsonify({"error": "Invalid 'limit' value."}), 400
-
-    if not usernames_input or not isinstance(usernames_input, list):
-        return jsonify({"error": "Invalid 'usernames' value."}), 400
-
-    input_usernames = [name.strip() for name in usernames_input if isinstance(name, str) and name.strip()]
+    usernames_input = data.get('usernames'); # ... (rest of username processing) ...
+    try: results_limit = int(data.get('limit', 10)); assert results_limit >= 1
+    except: return jsonify({"error": "Invalid 'limit' value."}), 400
+    if not usernames_input or not isinstance(usernames_input, list): return jsonify({"error": "Invalid 'usernames' value."}), 400
+    input_usernames = [n.strip() for n in usernames_input if isinstance(n, str) and n.strip()];
     if not input_usernames: return jsonify({"error": "No valid Instagram usernames provided."}), 400
-
     input_urls = [f"https://www.instagram.com/{username}/" for username in input_usernames]
-
-    run_input = {
-        "directUrls": input_urls,
-        "resultsType": "posts",
-        "resultsLimit": results_limit,
-    }
-    # ... (rest of existing instagram logic: print statements, try/except block for actor run, CSV generation, response) ...
+    run_input = { "directUrls": input_urls, "resultsType": "posts", "resultsLimit": results_limit }
     print(f"API (Instagram): Starting scraper for URLs: {', '.join(input_urls)} with limit {results_limit}")
     print(f"API (Instagram): Actor ID: {INSTAGRAM_ACTOR_ID}")
     print(f"API (Instagram): Run Input: {json.dumps(run_input)}")
@@ -153,24 +134,20 @@ def scrape_instagram_api():
         return jsonify({"error": f"An internal server error occurred (Instagram): {error_message}"}), 500
 
 
-# --- TikTok Endpoint ---
-# **** Make sure OPTIONS is listed in methods ****
-@app.route('/api/index/scrape/tiktok', methods=['POST', 'OPTIONS'])
+# ***** CORRECTED FLASK ROUTES *****
+@app.route('/scrape/tiktok', methods=['POST', 'OPTIONS'])
 def scrape_tiktok_api():
-    # **** Manually handle the OPTIONS preflight request ****
     if request.method == 'OPTIONS':
-        print("Handling OPTIONS request for /api/index/scrape/tiktok")
+        print("Handling OPTIONS request for /scrape/tiktok") # Log corrected path
         return _build_cors_preflight_response()
 
-    # --- Existing POST Logic ---
-    # (This code only runs if request.method == 'POST')
-    print("Handling POST request for /api/index/scrape/tiktok")
-    client = initialize_apify_client()
+    print("Handling POST request for /scrape/tiktok") # Log corrected path
+    # --- Existing POST Logic (No changes needed inside here) ---
+    client = initialize_apify_client(); # ... (rest of tiktok logic) ...
     if not client: return jsonify({"error": "Server configuration error: Apify Client unavailable."}), 500
-    # ... (rest of existing tiktok logic: get data, validate, prepare input, run actor, get results, csv, response) ...
-    data = request.get_json();
+    data = request.get_json(); # ... (rest of validation) ...
     if not data: return jsonify({"error": "No JSON body"}), 400
-    hashtags_input = data.get('hashtags')
+    hashtags_input = data.get('hashtags'); # ... (rest of hashtag processing) ...
     try: results_per_page = int(data.get('resultsPerPage', 100)); assert results_per_page >= 1
     except: return jsonify({"error": "Invalid 'resultsPerPage'"}), 400
     if not hashtags_input or not isinstance(hashtags_input, list): return jsonify({"error": "Invalid 'hashtags'"}), 400
@@ -206,7 +183,6 @@ def scrape_tiktok_api():
         return jsonify({"message": f"Successfully scraped {len(items_raw)} TikTok posts", "csvData": csv_data_string, "jsonData": items_raw, "filename": f"{base_filename}.csv", "jsonFilename": f"{base_filename}.json"}), 200
     except Exception as e:
         print(f"API Error (TikTok): An exception occurred: {e}"); traceback.print_exc(); error_message = str(e)
-        # Add specific error checks if needed
         return jsonify({"error": f"Internal server error (TikTok): {error_message}"}), 500
 
 
@@ -214,6 +190,6 @@ def scrape_tiktok_api():
 
 # Optional: Allow local execution via `python api/index.py`
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5001)) # Use a different port like 5001 for local
+    port = int(os.environ.get("PORT", 5001))
     print(f"[Local Dev] Starting Flask server on http://127.0.0.1:{port}")
     app.run(debug=True, host='127.0.0.1', port=port)
