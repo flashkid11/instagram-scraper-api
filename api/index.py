@@ -422,7 +422,7 @@ def clean_csv_value(value): # Keep as is
     return value
 
 # --- Instagram Endpoint (Handles Usernames -> Converts to URLs) ---
-@app.route('api/scrape/instagram', methods=['POST'])
+@app.route('api/index/scrape/instagram', methods=['POST'])
 def scrape_instagram_api():
     client = initialize_apify_client()
     if not client: return jsonify({"error": "Server configuration error: Apify Client unavailable."}), 500
@@ -531,7 +531,7 @@ def scrape_instagram_api():
 
 
 # --- TikTok Endpoint (Keep as is) ---
-@app.route('api/scrape/tiktok', methods=['POST'])
+@app.route('api/index/scrape/tiktok', methods=['POST'])
 def scrape_tiktok_api():
     # ... (Existing TikTok logic remains unchanged) ...
     client = initialize_apify_client()
