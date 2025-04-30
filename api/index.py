@@ -135,7 +135,7 @@ def scrape_instagram_api():
 
 
 # ***** CORRECTED FLASK ROUTES *****
-@app.route('/scrape/tiktok', methods=['POST', 'OPTIONS'])
+@app.route('/api/scrape/tiktok', methods=['POST', 'OPTIONS'])
 def scrape_tiktok_api():
     if request.method == 'OPTIONS':
         print("Handling OPTIONS request for /scrape/tiktok") # Log corrected path

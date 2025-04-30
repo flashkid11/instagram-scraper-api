@@ -12,7 +12,7 @@ import '../App.css';
 // const BACKEND_BASE_URL = process.env.FRONTEND_URLS || 'http://localhost:5000/api/scrape';
 // console.log(BACKEND_BASE_URL)
 // For vercel deployment
-const BACKEND_BASE_URL = 'https://social-media-scraper-api-dotai.vercel.app/api/index/scrape';
+const BACKEND_BASE_URL = '/api';
 
 const LOADING_STAGES = {
     INITIALIZING: "Initializing scraper...",
