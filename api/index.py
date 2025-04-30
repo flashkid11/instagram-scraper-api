@@ -1,354 +1,3 @@
-# import os
-# import csv
-# import io
-# import json
-# from datetime import datetime
-# from dotenv import load_dotenv
-# from apify_client import ApifyClient
-# from flask import Flask, request, jsonify
-# from flask_cors import CORS # Import CORS
-# import traceback
-
-# # Load environment variables from .env file
-# load_dotenv()
-# APIFY_TOKEN = os.getenv("APIFY_TOKEN")
-# # Optional: Define Actor IDs in .env for flexibility
-# # Make sure INSTAGRAM_ACTOR_ID is set correctly for username input if it differs from 'apify/instagram-scraper'
-# INSTAGRAM_ACTOR_ID = os.getenv("INSTAGRAM_ACTOR_ID", "apify/instagram-scraper")
-# TIKTOK_ACTOR_ID = os.getenv("TIKTOK_ACTOR_ID", "clockworks/tiktok-scraper")
-# # Define your frontend production domain(s) here or in .env
-# # Example: FRONTEND_URL=https://your-app.vercel.app,https://www.yourcustomdomain.com
-# FRONTEND_URLS = os.getenv("FRONTEND_URLS", "") # Default to empty string
-
-# # --- Flask App Setup ---
-# app = Flask(__name__)
-
-# # --- CORS Configuration ---
-# # Define allowed origins for production
-# # Split the FRONTEND_URLS env var by comma if it contains multiple domains
-# prod_origins = [origin.strip() for origin in FRONTEND_URLS.split(',') if origin.strip()]
-
-# # Always allow localhost for development (adjust port if your React dev server uses a different one)
-# dev_origin = "http://localhost:3000"
-
-# # Combine allowed origins
-# # In a real production setup, you might ONLY include prod_origins
-# # or use FLASK_ENV to conditionally include dev_origin
-# allowed_origins = prod_origins + [dev_origin]
-# # Filter out empty strings just in case
-# allowed_origins = [origin for origin in allowed_origins if origin]
-
-# # If no production URLs are set, default to allowing localhost and maybe a common placeholder like Vercel's default
-# if not prod_origins:
-#      print("WARNING: FRONTEND_URLS environment variable not set. Allowing only localhost for CORS.")
-#      # You might want to add a default Vercel URL pattern if deploying there, but be careful:
-#      # allowed_origins.append("https://*-your-vercel-team.vercel.app") # Example pattern
-#      # For now, just localhost if nothing else is set:
-#      if not allowed_origins: # Ensure localhost is added if prod_origins was empty initially
-#          allowed_origins = [dev_origin]
-
-
-# print(f"CORS allowed origins: {allowed_origins}")
-
-# # Apply CORS settings - RESTRICTED ORIGINS
-# CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
-# # ------------------------
-
-# # --- Helper Functions & Configuration ---
-# if not APIFY_TOKEN:
-#     print("CRITICAL ERROR: APIFY_TOKEN not found in environment variables.")
-
-# def initialize_apify_client():
-#     """Initializes and returns the ApifyClient or None if token is missing."""
-#     if not APIFY_TOKEN:
-#         print("Warning: APIFY_TOKEN is missing. Scraping will fail.")
-#         return None
-#     try:
-#         client = ApifyClient(APIFY_TOKEN)
-#         # Optional: Test connection (can throw exception on invalid token)
-#         # client.user('me').get()
-#         return client
-#     except Exception as e:
-#         print(f"ERROR: Failed to initialize Apify Client: {e}")
-#         return None
-
-
-# # --- Fieldnames for CSV ---
-# # Ensure these match the actual fields returned by the *specific* Apify actors you use
-# INSTAGRAM_CSV_FIELDNAMES = [
-#     'id', 'type', 'shortCode', 'caption', 'url', 'commentsCount',
-#     'dimensionsHeight', 'dimensionsWidth', 'displayUrl', 'likesCount',
-#     'timestamp', 'ownerFullName', 'ownerUsername', 'ownerId', 'productType',
-#     'videoViewCount', 'videoPlayCount', 'videoDuration', 'isSponsored',
-#     'firstComment', 'mentions', 'hashtags', 'alt', 'locationName', 'locationId',
-#     'inputUrl', # Often included by actors
-#     # Add/remove fields based on your actor's output when using 'usernames' input
-# ]
-
-# TIKTOK_CSV_FIELDNAMES = [
-#     'authorName', 'authorUsername', 'authorAvatar', 'text', 'diggCount',
-#     'shareCount', 'playCount', 'commentCount', 'collectCount',
-#     'videoDuration', 'musicName', 'musicAuthor', 'musicOriginal',
-#     'createTimeISO', 'webVideoUrl', 'hashtagInput' # Added input context
-# ]
-
-# def clean_csv_value(value):
-#     """Cleans a value for CSV insertion."""
-#     if isinstance(value, str):
-#         # Replace newline variations and tabs with a space
-#         cleaned = value.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-#         # Remove leading/trailing whitespace
-#         return cleaned.strip()
-#     # Handle lists/dicts by converting to JSON string for CSV clarity
-#     if isinstance(value, (list, dict)):
-#         try:
-#             # Ensure non-ASCII characters are handled correctly
-#             return json.dumps(value, ensure_ascii=False)
-#         except TypeError:
-#             return str(value) # Fallback to string representation
-#     # Handle None explicitly
-#     if value is None:
-#         return ''
-#     return value # Return other types (like numbers, booleans) as is
-
-
-# # --- Instagram Endpoint (Handles Usernames) ---
-# @app.route('/api/scrape/instagram', methods=['POST'])
-# def scrape_instagram_api():
-#     client = initialize_apify_client()
-#     if not client:
-#         return jsonify({"error": "Server configuration error: Apify Client unavailable."}), 500
-
-#     data = request.get_json()
-#     if not data:
-#         return jsonify({"error": "Invalid request: No JSON body found."}), 400
-
-#     # Get Usernames from request
-#     usernames_input = data.get('usernames')
-#     try:
-#         results_limit_per_profile = int(data.get('limit', 10))
-#         if results_limit_per_profile < 1: results_limit_per_profile = 1
-#     except (ValueError, TypeError):
-#         return jsonify({"error": "Invalid 'limit' value. Must be a positive integer."}), 400
-
-#     if not usernames_input or not isinstance(usernames_input, list):
-#         return jsonify({"error": "Invalid 'usernames' value. Must be a non-empty list of strings."}), 400
-
-#     # Prepare validated usernames for the actor input
-#     input_usernames = [name.strip() for name in usernames_input if isinstance(name, str) and name.strip()]
-#     input_urls = [f"https://www.instagram.com/{input_username}/" for input_username in input_usernames]
-#     if not input_usernames:
-#         return jsonify({"error": "No valid Instagram usernames provided."}), 400
-
-#     # --- Configure Apify Actor Input for Usernames ---
-#     # Adapt this based on the specific actor (e.g., apify/instagram-scraper uses 'username')
-#     run_input = {
-#         "directUrls": input_urls,           # Check actor docs: might be 'usernames' or 'profiles'
-#         "resultsType": "posts",                # Get posts
-#         "resultsLimit": results_limit_per_profile, # Limit posts per user
-#         # Remove fields not applicable when using username list, e.g., directUrls, searchType
-#     }
-#     # Note: If your actor ONLY takes one username at a time, you'll need to loop here and call the actor multiple times.
-#     # The current setup assumes the actor accepts a list of usernames.
-
-#     print(f"API (Instagram): Starting scraper for usernames: {', '.join(input_usernames)} with limit {results_limit_per_profile}")
-#     print(f"API (Instagram): Actor ID: {INSTAGRAM_ACTOR_ID}")
-#     print(f"API (Instagram): Run Input: {run_input}")
-
-#     try:
-#         # --- Run Apify Actor ---
-#         actor_run = client.actor(INSTAGRAM_ACTOR_ID).call(run_input=run_input)
-#         print(f"API (Instagram): Apify actor call finished. Run details: {actor_run}")
-
-#         # --- Fetch Results ---
-#         print(f"API (Instagram): Fetching results from dataset {actor_run.get('defaultDatasetId', 'N/A')}...")
-#         if not actor_run or 'defaultDatasetId' not in actor_run:
-#              print(f"ERROR: Actor run failed or missing dataset ID. Run: {actor_run}")
-#              return jsonify({"error": f"Actor run failed or did not produce a dataset. Check backend logs."}), 500
-
-#         dataset_id = actor_run["defaultDatasetId"]
-#         items_iterator = client.dataset(dataset_id).iterate_items()
-#         items_raw = list(items_iterator)
-#         print(f"API (Instagram): Fetched {len(items_raw)} items.")
-
-#         if not items_raw:
-#             print(f"API (Instagram): No items found for usernames: {', '.join(input_usernames)}")
-#             # Return success but indicate no data found
-#             return jsonify({
-#                 "message": f"Scraping completed, but no posts found for the given Instagram usernames ({', '.join(input_usernames)}).",
-#                 "csvData": "", "jsonData": [], "filename": "", "jsonFilename": ""
-#             }), 200
-
-#         # --- Generate CSV ---
-#         print(f"API (Instagram): Generating CSV data...")
-#         output_buffer = io.StringIO()
-#         writer = csv.DictWriter(output_buffer, fieldnames=INSTAGRAM_CSV_FIELDNAMES, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
-#         writer.writeheader()
-#         for item in items_raw:
-#             # Ensure all defined fields exist in the row, using get with default ''
-#             row_data = {field: clean_csv_value(item.get(field, '')) for field in INSTAGRAM_CSV_FIELDNAMES}
-#             writer.writerow(row_data)
-#         csv_data_string = output_buffer.getvalue()
-#         output_buffer.close()
-
-#         # --- Prepare Response ---
-#         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-#         # Sanitize username for filename
-#         first_username_safe = "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in input_usernames[0])[:50] # Limit length
-#         base_filename = f"instagram_{first_username_safe}_{timestamp}"
-#         csv_filename = f"{base_filename}.csv"
-#         json_filename = f"{base_filename}.json"
-
-#         print(f"API (Instagram): Successfully generated CSV data ({len(csv_data_string)} bytes).")
-
-#         return jsonify({
-#             "message": f"Successfully scraped {len(items_raw)} Instagram posts for {', '.join(input_usernames)}.",
-#             "csvData": csv_data_string,
-#             "jsonData": items_raw,
-#             "filename": csv_filename,
-#             "jsonFilename": json_filename
-#         }), 200
-
-#     except Exception as e:
-#         print(f"API Error (Instagram): An error occurred: {e}")
-#         traceback.print_exc()
-#         error_message = str(e)
-#         # Try to provide more user-friendly errors based on common Apify issues
-#         if "max concurrency" in error_message.lower():
-#             error_message = "Apify plan limit reached (max concurrency). Please wait or upgrade your plan."
-#         elif "run aborted" in error_message.lower():
-#             error_message = "Apify actor run was aborted or timed out."
-#         elif "authentication failed" in error_message.lower():
-#              error_message = "Apify authentication failed. Please check the API token."
-#         elif "not found" in error_message.lower() and INSTAGRAM_ACTOR_ID in error_message:
-#              error_message = f"Instagram Actor ({INSTAGRAM_ACTOR_ID}) not found. Check the Actor ID."
-
-#         return jsonify({"error": f"An internal server error occurred (Instagram): {error_message}"}), 500
-
-
-# # --- TikTok Endpoint ---
-# @app.route('/api/scrape/tiktok', methods=['POST'])
-# def scrape_tiktok_api():
-#     client = initialize_apify_client()
-#     if not client: return jsonify({"error": "Server config error: Apify Client unavailable."}), 500
-
-#     data = request.get_json()
-#     if not data: return jsonify({"error": "Invalid request: No JSON body"}), 400
-
-#     hashtags_input = data.get('hashtags')
-#     try:
-#         results_per_page = int(data.get('resultsPerPage', 100))
-#         if results_per_page < 1: results_per_page = 1
-#     except (ValueError, TypeError):
-#         return jsonify({"error": "Invalid 'resultsPerPage' value. Must be a positive integer."}), 400
-
-#     if not hashtags_input or not isinstance(hashtags_input, list):
-#         return jsonify({"error": "Invalid 'hashtags' value. Must be a non-empty list of strings."}), 400
-
-#     input_hashtags = [tag.strip() for tag in hashtags_input if isinstance(tag, str) and tag.strip()]
-#     if not input_hashtags: return jsonify({"error": "No valid hashtags provided."}), 400
-
-#     # Configure TikTok actor input (add other options as needed)
-#     run_input = {
-#         "hashtags": input_hashtags,
-#         "resultsPerPage": results_per_page,
-#         # Example: disable media downloads if not needed to save cost/time
-#         "shouldDownloadVideos": False,
-#         "shouldDownloadCovers": False,
-#     }
-#     print(f"API (TikTok): Starting scraper for hashtags: {', '.join(input_hashtags)} with limit {results_per_page}")
-#     print(f"API (TikTok): Actor ID: {TIKTOK_ACTOR_ID}")
-#     print(f"API (TikTok): Run Input: {run_input}")
-
-#     try:
-#         # Run TikTok actor
-#         actor_run = client.actor(TIKTOK_ACTOR_ID).call(run_input=run_input)
-#         print(f"API (TikTok): Actor call finished. Run details: {actor_run}")
-
-#         if not actor_run or 'defaultDatasetId' not in actor_run:
-#              print(f"ERROR: TikTok Actor run failed or missing dataset ID. Run: {actor_run}")
-#              return jsonify({"error": f"TikTok Actor run failed or did not produce a dataset. Check backend logs."}), 500
-
-#         # Fetch results
-#         dataset_id = actor_run["defaultDatasetId"]
-#         items_iterator = client.dataset(dataset_id).iterate_items()
-#         items_raw = list(items_iterator)
-#         print(f"API (TikTok): Fetched {len(items_raw)} items.")
-
-#         if not items_raw:
-#              print(f"API (TikTok): No items found for hashtags: {', '.join(input_hashtags)}")
-#              return jsonify({"message": f"Scraping completed, but no posts found for the given TikTok hashtags ({', '.join(input_hashtags)}).", "csvData": "", "jsonData": [], "filename": "", "jsonFilename": ""}), 200
-
-#         # Generate CSV
-#         print(f"API (TikTok): Generating CSV data...")
-#         output_buffer = io.StringIO()
-#         writer = csv.DictWriter(output_buffer, fieldnames=TIKTOK_CSV_FIELDNAMES, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
-#         writer.writeheader()
-#         for item in items_raw:
-#             # Flattening logic for TikTok CSV (ensure all keys are handled)
-#             author_meta = item.get('authorMeta', {})
-#             video_meta = item.get('videoMeta', {})
-#             music_meta = item.get('musicMeta', {})
-#             row_data = {
-#                 'authorName': clean_csv_value(author_meta.get('name', '')),
-#                 'authorUsername': clean_csv_value(author_meta.get('nickName', author_meta.get('name', ''))), # Fallback nickname to name
-#                 'authorAvatar': clean_csv_value(author_meta.get('avatar', '')),
-#                 'text': clean_csv_value(item.get('text', '')),
-#                 'diggCount': item.get('diggCount', 0),
-#                 'shareCount': item.get('shareCount', 0),
-#                 'playCount': item.get('playCount', 0),
-#                 'commentCount': item.get('commentCount', 0),
-#                 'collectCount': item.get('collectCount', 0),
-#                 'videoDuration': video_meta.get('duration', 0),
-#                 'musicName': clean_csv_value(music_meta.get('musicName', '')),
-#                 'musicAuthor': clean_csv_value(music_meta.get('musicAuthor', '')),
-#                 'musicOriginal': music_meta.get('musicOriginal', False),
-#                 'createTimeISO': clean_csv_value(item.get('createTimeISO', '')),
-#                 'webVideoUrl': clean_csv_value(item.get('webVideoUrl', '')),
-#                 'hashtagInput': clean_csv_value(item.get('hashtagInput', ', '.join(input_hashtags))) # Include searched hashtags
-#             }
-#             # Only write fields defined in TIKTOK_CSV_FIELDNAMES
-#             filtered_row = {k: v for k, v in row_data.items() if k in TIKTOK_CSV_FIELDNAMES}
-#             writer.writerow(filtered_row)
-#         csv_data_string = output_buffer.getvalue()
-#         output_buffer.close()
-
-#         # Prepare Response
-#         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-#         first_hashtag_safe = "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in input_hashtags[0])[:50]
-#         base_filename = f"tiktok_{first_hashtag_safe}_{timestamp}"
-#         csv_filename = f"{base_filename}.csv"
-#         json_filename = f"{base_filename}.json"
-
-#         print(f"API (TikTok): Successfully generated CSV data ({len(csv_data_string)} bytes).")
-#         return jsonify({
-#             "message": f"Successfully scraped {len(items_raw)} TikTok posts for {', '.join(input_hashtags)}.",
-#             "csvData": csv_data_string, "jsonData": items_raw,
-#             "filename": csv_filename, "jsonFilename": json_filename
-#         }), 200
-
-#     except Exception as e:
-#         print(f"API Error (TikTok): An error occurred: {e}")
-#         traceback.print_exc()
-#         error_message = str(e)
-#         # Add specific error checks if needed
-#         if "not found" in error_message.lower() and TIKTOK_ACTOR_ID in error_message:
-#              error_message = f"TikTok Actor ({TIKTOK_ACTOR_ID}) not found. Check the Actor ID."
-
-#         return jsonify({"error": f"Internal server error (TikTok): {type(e).__name__} - {error_message}"}), 500
-
-
-# # --- Run Flask App ---
-# if __name__ == '__main__':
-#     # Default port is 5000, but can be overridden by PORT environment variable
-#     port = int(os.environ.get("PORT", 5000))
-#     # Use Gunicorn or Waitress for production instead of Flask's built-in server
-#     is_production = os.environ.get("FLASK_ENV") == "production"
-#     print(f"Starting Flask server on http://0.0.0.0:{port} (Debug Mode: {'False' if is_production else 'True'})")
-#     # Set debug=False for production environments!
-#     app.run(debug=(not is_production), host='0.0.0.0', port=port)
-
-
 # api/index.py
 import os
 import csv
@@ -357,27 +6,25 @@ import json
 from datetime import datetime
 from dotenv import load_dotenv
 from apify_client import ApifyClient
-from flask import Flask, request, jsonify
+# **** Import make_response ****
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 import traceback
 
 # Load environment variables
 load_dotenv()
 APIFY_TOKEN = os.getenv("APIFY_TOKEN")
-INSTAGRAM_ACTOR_ID = os.getenv("INSTAGRAM_ACTOR_ID", "apify/instagram-scraper") # Default actor
+# Use specific defaults or ensure they are set in Vercel env vars
+INSTAGRAM_ACTOR_ID = os.getenv("INSTAGRAM_ACTOR_ID", "apify/instagram-scraper")
 TIKTOK_ACTOR_ID = os.getenv("TIKTOK_ACTOR_ID", "clockworks/tiktok-scraper")
-FRONTEND_URLS = os.getenv("FRONTEND_URLS", "")
+# FRONTEND_URLS = os.getenv("FRONTEND_URLS", "") # Keep if using specific origins below
 
 # --- Flask App Setup ---
 app = Flask(__name__)
 
 # --- CORS Configuration ---
-prod_origins = [origin.strip() for origin in FRONTEND_URLS.split(',') if origin.strip()]
-dev_origin = "http://localhost:3000"
-allowed_origins = list(set(prod_origins + [dev_origin]))
-if not allowed_origins: allowed_origins = [dev_origin]
-
-# print(f"CORS allowed origins: {allowed_origins}")
+# Initialize CORS - this helps add headers to your *actual* POST responses
+# Let's keep it simple with allow all for now to ensure it's not an origin mismatch issue
 CORS(app)
 # ------------------------
 
@@ -386,16 +33,12 @@ if not APIFY_TOKEN:
     print("CRITICAL ERROR: APIFY_TOKEN environment variable not set.")
 
 def initialize_apify_client():
+    # ... (keep existing code) ...
     if not APIFY_TOKEN: print("Warning: APIFY_TOKEN is missing."); return None
-    try:
-        client = ApifyClient(APIFY_TOKEN)
-        return client
-    except Exception as e:
-        print(f"ERROR: Failed to initialize Apify Client: {e}")
-        return None
+    try: return ApifyClient(APIFY_TOKEN)
+    except Exception as e: print(f"ERROR: Failed to initialize Apify Client: {e}"); return None
 
 # --- Fieldnames for CSV ---
-# Keep these updated based on actual actor output
 INSTAGRAM_CSV_FIELDNAMES = [
     'id', 'type', 'shortCode', 'caption', 'url', 'commentsCount', 'likesCount',
     'timestamp', 'ownerUsername', 'ownerId', 'ownerFullName',
@@ -403,8 +46,7 @@ INSTAGRAM_CSV_FIELDNAMES = [
     'alt', 'locationName', 'locationId', 'isSponsored',
     'hashtags', 'mentions', 'firstComment', 'inputUrl', 'error',
 ]
-
-TIKTOK_CSV_FIELDNAMES = [ # Keep as is
+TIKTOK_CSV_FIELDNAMES = [
     'authorName', 'authorUsername', 'authorAvatar', 'text', 'diggCount',
     'shareCount', 'playCount', 'commentCount', 'collectCount',
     'videoDuration', 'musicName', 'musicAuthor', 'musicOriginal',
@@ -412,6 +54,7 @@ TIKTOK_CSV_FIELDNAMES = [ # Keep as is
 ]
 
 def clean_csv_value(value): # Keep as is
+    # ... (keep existing code) ...
     if value is None: return ''
     if isinstance(value, str):
         cleaned = value.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
@@ -421,108 +64,88 @@ def clean_csv_value(value): # Keep as is
         except TypeError: return str(value)
     return value
 
-# --- Instagram Endpoint (Handles Usernames -> Converts to URLs) ---
-@app.route('/api/index/scrape/instagram', methods=['POST'])
+# --- Helper Function for Manual OPTIONS Preflight Response ---
+def _build_cors_preflight_response():
+    """Builds a response for a CORS preflight request (OPTIONS)."""
+    response = make_response()
+    # Crucially, set the Allow-Origin header. Use '*' for broad testing,
+    # or restrict to your frontend origin(s) in production.
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    # Specify allowed headers the frontend can send
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+    # Specify allowed methods for the actual request
+    response.headers.add('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS,POST,PUT')
+    # Allow credentials if your frontend sends them (e.g., cookies)
+    # response.headers.add('Access-Control-Allow-Credentials', 'true')
+    print("Built CORS preflight response") # Log when this is called
+    return response
+
+
+# --- Instagram Endpoint ---
+# **** Make sure OPTIONS is listed in methods ****
+@app.route('/api/index/scrape/instagram', methods=['POST', 'OPTIONS'])
 def scrape_instagram_api():
+    # **** Manually handle the OPTIONS preflight request ****
+    if request.method == 'OPTIONS':
+        print("Handling OPTIONS request for /api/index/scrape/instagram")
+        return _build_cors_preflight_response()
+
+    # --- Existing POST Logic ---
+    # (This code only runs if request.method == 'POST')
+    print("Handling POST request for /api/index/scrape/instagram")
     client = initialize_apify_client()
     if not client: return jsonify({"error": "Server configuration error: Apify Client unavailable."}), 500
 
     data = request.get_json()
     if not data: return jsonify({"error": "Invalid request: No JSON body found."}), 400
 
-    usernames_input = data.get('usernames') # Still receive usernames from frontend
+    usernames_input = data.get('usernames')
     try:
         results_limit = int(data.get('limit', 10))
         if results_limit < 1: results_limit = 1
     except (ValueError, TypeError):
-        return jsonify({"error": "Invalid 'limit' value. Must be a positive integer."}), 400
+        return jsonify({"error": "Invalid 'limit' value."}), 400
 
     if not usernames_input or not isinstance(usernames_input, list):
-        return jsonify({"error": "Invalid 'usernames' value. Must be a non-empty list of strings."}), 400
+        return jsonify({"error": "Invalid 'usernames' value."}), 400
 
     input_usernames = [name.strip() for name in usernames_input if isinstance(name, str) and name.strip()]
     if not input_usernames: return jsonify({"error": "No valid Instagram usernames provided."}), 400
 
-    # *** Convert usernames to profile URLs for directUrls ***
     input_urls = [f"https://www.instagram.com/{username}/" for username in input_usernames]
 
-    # --- CORRECT Apify Actor Input using directUrls ---
     run_input = {
-        "directUrls": input_urls,         # Use the generated URLs
-        "resultsType": "posts",           # Get posts (or 'profile' etc.)
-        "resultsLimit": results_limit,    # Limit results per URL
-        # Remove 'username', potentially add back searchType/searchLimit if needed by your logic
-        # Often 'searchType':'user' might be implicitly handled or irrelevant with directUrls
-        # "searchType": "user", # Check if needed/compatible with directUrls for this actor
-        # "searchLimit": 1,     # Usually not needed with directUrls
+        "directUrls": input_urls,
+        "resultsType": "posts",
+        "resultsLimit": results_limit,
     }
-
-    print(f"API (Instagram): Starting scraper for URLs: {', '.join(input_urls)} with limit {results_limit}") # Log URLs
+    # ... (rest of existing instagram logic: print statements, try/except block for actor run, CSV generation, response) ...
+    print(f"API (Instagram): Starting scraper for URLs: {', '.join(input_urls)} with limit {results_limit}")
     print(f"API (Instagram): Actor ID: {INSTAGRAM_ACTOR_ID}")
     print(f"API (Instagram): Run Input: {json.dumps(run_input)}")
-
     try:
-        # Run Apify Actor
         actor_run = client.actor(INSTAGRAM_ACTOR_ID).call(run_input=run_input)
         print(f"API (Instagram): Apify actor call finished.")
-
-        # Check run status and fetch results
-        run_details = client.run(actor_run["id"]).get()
-        run_status = run_details.get('status')
+        run_details = client.run(actor_run["id"]).get(); run_status = run_details.get('status')
         print(f"API (Instagram): Actor run status: {run_status}")
-
         if run_status != 'SUCCEEDED':
-             print(f"ERROR: Instagram Actor run did not succeed. Status: {run_status}. Details: {run_details}")
+             print(f"ERROR: Instagram Actor run did not succeed. Status: {run_status}.")
              error_info = run_details.get('build', {}).get('error', {}).get('message', 'Unknown error during actor run.')
              return jsonify({"error": f"Instagram scraping failed. Actor status: {run_status}. Info: {error_info}"}), 500
-
         dataset_id = run_details.get("defaultDatasetId")
-        if not dataset_id:
-            print(f"ERROR: Actor run succeeded but no dataset ID found. Run details: {run_details}")
-            return jsonify({"error": "Scraping finished but no dataset was produced."}), 500
-
+        if not dataset_id: return jsonify({"error": "Scraping finished but no dataset was produced."}), 500
         print(f"API (Instagram): Fetching results from dataset {dataset_id}...")
-        items_iterator = client.dataset(dataset_id).iterate_items()
-        items_raw = list(items_iterator)
+        items_raw = list(client.dataset(dataset_id).iterate_items())
         print(f"API (Instagram): Fetched {len(items_raw)} items.")
-
-        if not items_raw:
-            print(f"API (Instagram): No items found for input URLs: {', '.join(input_urls)}") # Log URLs
-            return jsonify({
-                "message": f"Scraping completed, but no posts found for the given inputs.", # General message
-                "csvData": "", "jsonData": [], "filename": "", "jsonFilename": ""
-            }), 200
-
-        # Generate CSV
-        print(f"API (Instagram): Generating CSV data...")
-        output_buffer = io.StringIO()
-        writer = csv.DictWriter(output_buffer, fieldnames=INSTAGRAM_CSV_FIELDNAMES, extrasaction='ignore', quoting=csv.QUOTE_MINIMAL)
-        writer.writeheader()
-        for item in items_raw:
-            row_data = {field: clean_csv_value(item.get(field, '')) for field in INSTAGRAM_CSV_FIELDNAMES}
-            writer.writerow(row_data)
-        csv_data_string = output_buffer.getvalue()
-        output_buffer.close()
-
-        # Prepare Response Filename (use username still)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        first_username_safe = "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in input_usernames[0])[:50]
-        base_filename = f"instagram_{first_username_safe}_{timestamp}"
-        csv_filename = f"{base_filename}.csv"
-        json_filename = f"{base_filename}.json"
-
+        if not items_raw: return jsonify({"message": f"No posts found.", "csvData": "", "jsonData": [], "filename": "", "jsonFilename": ""}), 200
+        output_buffer = io.StringIO(); writer = csv.DictWriter(output_buffer, fieldnames=INSTAGRAM_CSV_FIELDNAMES, extrasaction='ignore'); writer.writeheader()
+        for item in items_raw: writer.writerow({field: clean_csv_value(item.get(field, '')) for field in INSTAGRAM_CSV_FIELDNAMES})
+        csv_data_string = output_buffer.getvalue(); output_buffer.close()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S"); first_username_safe = "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in input_usernames[0])[:50]; base_filename = f"instagram_{first_username_safe}_{timestamp}"
         print(f"API (Instagram): Successfully generated CSV data.")
-        return jsonify({
-            "message": f"Successfully scraped {len(items_raw)} Instagram posts for {', '.join(input_usernames)}.",
-            "csvData": csv_data_string, "jsonData": items_raw,
-            "filename": csv_filename, "jsonFilename": json_filename
-        }), 200
-
+        return jsonify({"message": f"Successfully scraped {len(items_raw)} posts", "csvData": csv_data_string, "jsonData": items_raw, "filename": f"{base_filename}.csv", "jsonFilename": f"{base_filename}.json"}), 200
     except Exception as e:
-        print(f"API Error (Instagram): An exception occurred: {e}")
-        traceback.print_exc()
-        error_message = str(e)
-        # ... (Specific error message checks) ...
+        print(f"API Error (Instagram): An exception occurred: {e}"); traceback.print_exc(); error_message = str(e)
         if "max concurrency" in error_message.lower(): error_message = "Apify plan limit reached (max concurrency)."
         elif "run aborted" in error_message.lower(): error_message = "Apify actor run was aborted or timed out."
         elif "authentication failed" in error_message.lower(): error_message = "Apify authentication failed. Check API token."
@@ -530,28 +153,67 @@ def scrape_instagram_api():
         return jsonify({"error": f"An internal server error occurred (Instagram): {error_message}"}), 500
 
 
-# --- TikTok Endpoint (Keep as is) ---
-@app.route('/api/index/scrape/tiktok', methods=['POST'])
+# --- TikTok Endpoint ---
+# **** Make sure OPTIONS is listed in methods ****
+@app.route('/api/index/scrape/tiktok', methods=['POST', 'OPTIONS'])
 def scrape_tiktok_api():
-    # ... (Existing TikTok logic remains unchanged) ...
+    # **** Manually handle the OPTIONS preflight request ****
+    if request.method == 'OPTIONS':
+        print("Handling OPTIONS request for /api/index/scrape/tiktok")
+        return _build_cors_preflight_response()
+
+    # --- Existing POST Logic ---
+    # (This code only runs if request.method == 'POST')
+    print("Handling POST request for /api/index/scrape/tiktok")
     client = initialize_apify_client()
-    if not client: return jsonify({"error": "Server config error: Apify Client unavailable."}), 500
-    data = request.get_json(); # ... rest of validation ...
-    # ... prepare run_input for tiktok ...
-    print(f"API (TikTok): Starting scraper...")
+    if not client: return jsonify({"error": "Server configuration error: Apify Client unavailable."}), 500
+    # ... (rest of existing tiktok logic: get data, validate, prepare input, run actor, get results, csv, response) ...
+    data = request.get_json();
+    if not data: return jsonify({"error": "No JSON body"}), 400
+    hashtags_input = data.get('hashtags')
+    try: results_per_page = int(data.get('resultsPerPage', 100)); assert results_per_page >= 1
+    except: return jsonify({"error": "Invalid 'resultsPerPage'"}), 400
+    if not hashtags_input or not isinstance(hashtags_input, list): return jsonify({"error": "Invalid 'hashtags'"}), 400
+    input_hashtags = [tag.strip() for tag in hashtags_input if isinstance(tag, str) and tag.strip()]
+    if not input_hashtags: return jsonify({"error": "No valid hashtags"}), 400
+    run_input = { "hashtags": input_hashtags, "resultsPerPage": results_per_page }
+    print(f"API (TikTok): Starting scraper for hashtags: {', '.join(input_hashtags)} with limit {results_per_page}")
+    print(f"API (TikTok): Actor ID: {TIKTOK_ACTOR_ID}")
+    print(f"API (TikTok): Run Input: {json.dumps(run_input)}")
     try:
-        # ... run actor, fetch, generate csv, return json ...
-        pass # Placeholder for existing TikTok code
+        actor_run = client.actor(TIKTOK_ACTOR_ID).call(run_input=run_input)
+        print(f"API (TikTok): Actor call finished.")
+        run_details = client.run(actor_run["id"]).get(); run_status = run_details.get('status')
+        print(f"API (TikTok): Actor run status: {run_status}")
+        if run_status != 'SUCCEEDED':
+             print(f"ERROR: TikTok Actor run did not succeed. Status: {run_status}.")
+             error_info = run_details.get('build', {}).get('error', {}).get('message', 'Unknown error during actor run.')
+             return jsonify({"error": f"TikTok scraping failed. Actor status: {run_status}. Info: {error_info}"}), 500
+        dataset_id = run_details.get("defaultDatasetId")
+        if not dataset_id: return jsonify({"error": "Scraping finished but no dataset was produced."}), 500
+        print(f"API (TikTok): Fetching results from dataset {dataset_id}...")
+        items_raw = list(client.dataset(dataset_id).iterate_items())
+        print(f"API (TikTok): Fetched {len(items_raw)} items.")
+        if not items_raw: return jsonify({"message": "No posts found for TikTok hashtags.", "csvData": "", "jsonData": [], "filename": "", "jsonFilename": ""}), 200
+        print(f"API (TikTok): Generating CSV data...")
+        output_buffer = io.StringIO(); writer = csv.DictWriter(output_buffer, fieldnames=TIKTOK_CSV_FIELDNAMES, extrasaction='ignore'); writer.writeheader()
+        for item in items_raw:
+             row_data = { 'authorName': clean_csv_value(item.get('authorMeta', {}).get('name')), 'authorUsername': clean_csv_value(item.get('authorMeta', {}).get('nickName', item.get('authorMeta', {}).get('name'))), 'authorAvatar': clean_csv_value(item.get('authorMeta', {}).get('avatar')), 'text': clean_csv_value(item.get('text')), 'diggCount': item.get('diggCount', 0), 'shareCount': item.get('shareCount', 0), 'playCount': item.get('playCount', 0), 'commentCount': item.get('commentCount', 0), 'collectCount': item.get('collectCount', 0), 'videoDuration': item.get('videoMeta', {}).get('duration'), 'musicName': clean_csv_value(item.get('musicMeta', {}).get('musicName')), 'musicAuthor': clean_csv_value(item.get('musicMeta', {}).get('musicAuthor')), 'musicOriginal': item.get('musicMeta', {}).get('musicOriginal'), 'createTimeISO': clean_csv_value(item.get('createTimeISO')), 'webVideoUrl': clean_csv_value(item.get('webVideoUrl')), 'hashtagInput': clean_csv_value(item.get('hashtagInput', ', '.join(input_hashtags))) }
+             filtered_row = {k: v for k, v in row_data.items() if k in TIKTOK_CSV_FIELDNAMES}; writer.writerow(filtered_row)
+        csv_data_string = output_buffer.getvalue(); output_buffer.close()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S"); first_hashtag = input_hashtags[0].replace(" ", "_").replace("/", "_"); base_filename = f"tiktok_{first_hashtag}_{timestamp}"
+        print(f"API (TikTok): Successfully generated CSV data.")
+        return jsonify({"message": f"Successfully scraped {len(items_raw)} TikTok posts", "csvData": csv_data_string, "jsonData": items_raw, "filename": f"{base_filename}.csv", "jsonFilename": f"{base_filename}.json"}), 200
     except Exception as e:
-        # ... handle exceptions ...
-        pass # Placeholder
+        print(f"API Error (TikTok): An exception occurred: {e}"); traceback.print_exc(); error_message = str(e)
+        # Add specific error checks if needed
+        return jsonify({"error": f"Internal server error (TikTok): {error_message}"}), 500
 
 
 # --- (No app.run() needed for Vercel) ---
 
+# Optional: Allow local execution via `python api/index.py`
 if __name__ == '__main__':
-    # This block allows you to run the app locally using: python api/index.py
-    port = int(os.environ.get("PORT", 5000))
-    is_production = os.environ.get("FLASK_ENV") == "production"
-    print(f"[Local Dev] Starting Flask server on http://127.0.0.1:{port} (Debug Mode: {'False' if is_production else 'True'})")
-    app.run(debug=(not is_production), host='127.0.0.1', port=port)
+    port = int(os.environ.get("PORT", 5001)) # Use a different port like 5001 for local
+    print(f"[Local Dev] Starting Flask server on http://127.0.0.1:{port}")
+    app.run(debug=True, host='127.0.0.1', port=port)
