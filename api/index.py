@@ -6,94 +6,59 @@ import json
 from datetime import datetime
 from dotenv import load_dotenv
 from apify_client import ApifyClient
-# **** Import make_response ****
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response # Keep make_response
 from flask_cors import CORS
 import traceback
 
 # Load environment variables
 load_dotenv()
 APIFY_TOKEN = os.getenv("APIFY_TOKEN")
-# Use specific defaults or ensure they are set in Vercel env vars
 INSTAGRAM_ACTOR_ID = os.getenv("INSTAGRAM_ACTOR_ID", "apify/instagram-scraper")
 TIKTOK_ACTOR_ID = os.getenv("TIKTOK_ACTOR_ID", "clockworks/tiktok-scraper")
-# FRONTEND_URLS = os.getenv("FRONTEND_URLS", "") # Keep if using specific origins below
 
 # --- Flask App Setup ---
 app = Flask(__name__)
 
 # --- CORS Configuration ---
-# Initialize CORS - this helps add headers to your *actual* POST responses
-# Let's keep it simple with allow all for now to ensure it's not an origin mismatch issue
+# Allow all origins for simplicity during debugging and deployment for now
 CORS(app)
 # ------------------------
 
 # --- Helper Functions & Configuration ---
-if not APIFY_TOKEN:
-    print("CRITICAL ERROR: APIFY_TOKEN environment variable not set.")
-
+if not APIFY_TOKEN: print("CRITICAL ERROR: APIFY_TOKEN environment variable not set.")
 def initialize_apify_client():
-    # ... (keep existing code) ...
     if not APIFY_TOKEN: print("Warning: APIFY_TOKEN is missing."); return None
     try: return ApifyClient(APIFY_TOKEN)
     except Exception as e: print(f"ERROR: Failed to initialize Apify Client: {e}"); return None
-
-# --- Fieldnames for CSV ---
-INSTAGRAM_CSV_FIELDNAMES = [
-    'id', 'type', 'shortCode', 'caption', 'url', 'commentsCount', 'likesCount',
-    'timestamp', 'ownerUsername', 'ownerId', 'ownerFullName',
-    'displayUrl', 'videoUrl', 'videoViewCount', 'videoPlayCount', 'videoDuration',
-    'alt', 'locationName', 'locationId', 'isSponsored',
-    'hashtags', 'mentions', 'firstComment', 'inputUrl', 'error',
-]
-TIKTOK_CSV_FIELDNAMES = [
-    'authorName', 'authorUsername', 'authorAvatar', 'text', 'diggCount',
-    'shareCount', 'playCount', 'commentCount', 'collectCount',
-    'videoDuration', 'musicName', 'musicAuthor', 'musicOriginal',
-    'createTimeISO', 'webVideoUrl', 'hashtagInput'
-]
-
-def clean_csv_value(value): # Keep as is
-    # ... (keep existing code) ...
+# --- Fieldnames (Keep as is) ---
+INSTAGRAM_CSV_FIELDNAMES = [ 'id', 'type', 'shortCode', 'caption', 'url', 'commentsCount', 'likesCount', 'timestamp', 'ownerUsername', 'ownerId', 'ownerFullName', 'displayUrl', 'videoUrl', 'videoViewCount', 'videoPlayCount', 'videoDuration', 'alt', 'locationName', 'locationId', 'isSponsored', 'hashtags', 'mentions', 'firstComment', 'inputUrl', 'error', ]
+TIKTOK_CSV_FIELDNAMES = [ 'authorName', 'authorUsername', 'authorAvatar', 'text', 'diggCount', 'shareCount', 'playCount', 'commentCount', 'collectCount', 'videoDuration', 'musicName', 'musicAuthor', 'musicOriginal', 'createTimeISO', 'webVideoUrl', 'hashtagInput' ]
+def clean_csv_value(value):
     if value is None: return ''
-    if isinstance(value, str):
-        cleaned = value.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-        return cleaned.strip()
-    if isinstance(value, (list, dict)):
-        try: return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, str): cleaned = value.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' '); return cleaned.strip()
+    if isinstance(value, (list, dict)): 
+        try: return json.dumps(value, ensure_ascii=False); 
         except TypeError: return str(value)
     return value
-
-# --- Helper Function for Manual OPTIONS Preflight Response ---
 def _build_cors_preflight_response():
-    """Builds a response for a CORS preflight request (OPTIONS)."""
-    response = make_response()
-    # Crucially, set the Allow-Origin header. Use '*' for broad testing,
-    # or restrict to your frontend origin(s) in production.
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    # Specify allowed headers the frontend can send
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
-    # Specify allowed methods for the actual request
-    response.headers.add('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS,POST,PUT')
-    # Allow credentials if your frontend sends them (e.g., cookies)
-    # response.headers.add('Access-Control-Allow-Credentials', 'true')
-    print("Built CORS preflight response") # Log when this is called
-    return response
+    response = make_response(); response.headers.add("Access-Control-Allow-Origin", "*"); response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With'); response.headers.add('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS,POST,PUT'); print("Built CORS preflight response"); return response
 
+# --- Routes ---
 
+# **** FLASK ROUTES RELATIVE TO /api/index ****
 @app.route('/scrape/instagram', methods=['POST', 'OPTIONS'])
 def scrape_instagram_api():
     if request.method == 'OPTIONS':
-        print("Handling OPTIONS request for /scrape/instagram") # Log corrected path
+        print("Handling OPTIONS request for /scrape/instagram")
         return _build_cors_preflight_response()
 
-    print("Handling POST request for /scrape/instagram") # Log corrected path
+    print("Handling POST request for /scrape/instagram")
     # --- Existing POST Logic (No changes needed inside here) ---
-    client = initialize_apify_client(); # ... (rest of instagram logic) ...
+    client = initialize_apify_client();
     if not client: return jsonify({"error": "Server configuration error: Apify Client unavailable."}), 500
-    data = request.get_json(); # ... (rest of validation) ...
+    data = request.get_json();
     if not data: return jsonify({"error": "Invalid request: No JSON body found."}), 400
-    usernames_input = data.get('usernames'); # ... (rest of username processing) ...
+    usernames_input = data.get('usernames');
     try: results_limit = int(data.get('limit', 10)); assert results_limit >= 1
     except: return jsonify({"error": "Invalid 'limit' value."}), 400
     if not usernames_input or not isinstance(usernames_input, list): return jsonify({"error": "Invalid 'usernames' value."}), 400
@@ -128,20 +93,18 @@ def scrape_instagram_api():
     except Exception as e:
         print(f"API Error (Instagram): An exception occurred: {e}"); traceback.print_exc(); error_message = str(e)
         if "max concurrency" in error_message.lower(): error_message = "Apify plan limit reached (max concurrency)."
-        elif "run aborted" in error_message.lower(): error_message = "Apify actor run was aborted or timed out."
-        elif "authentication failed" in error_message.lower(): error_message = "Apify authentication failed. Check API token."
-        elif "not found" in error_message.lower() and INSTAGRAM_ACTOR_ID in error_message: error_message = f"Instagram Actor ({INSTAGRAM_ACTOR_ID}) not found."
+        # ... other error message checks ...
         return jsonify({"error": f"An internal server error occurred (Instagram): {error_message}"}), 500
 
 
-# ***** CORRECTED FLASK ROUTES *****
-@app.route('/api/scrape/tiktok', methods=['POST', 'OPTIONS'])
+# **** FLASK ROUTES RELATIVE TO /api/index ****
+@app.route('/scrape/tiktok', methods=['POST', 'OPTIONS'])
 def scrape_tiktok_api():
     if request.method == 'OPTIONS':
-        print("Handling OPTIONS request for /scrape/tiktok") # Log corrected path
+        print("Handling OPTIONS request for /scrape/tiktok")
         return _build_cors_preflight_response()
 
-    print("Handling POST request for /scrape/tiktok") # Log corrected path
+    print("Handling POST request for /scrape/tiktok")
     # --- Existing POST Logic (No changes needed inside here) ---
     client = initialize_apify_client(); # ... (rest of tiktok logic) ...
     if not client: return jsonify({"error": "Server configuration error: Apify Client unavailable."}), 500
@@ -190,6 +153,6 @@ def scrape_tiktok_api():
 
 # Optional: Allow local execution via `python api/index.py`
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5001))
+    port = int(os.environ.get("PORT", 5001)) # Use 5001 for local testing
     print(f"[Local Dev] Starting Flask server on http://127.0.0.1:{port}")
-    app.run(debug=True, host='127.0.0.1', port=port)
+    app.run(debug=True, host='127.0.0.1', port=port) # Run on 127.0.0.1 for local
